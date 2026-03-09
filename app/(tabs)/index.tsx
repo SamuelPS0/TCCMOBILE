@@ -3,12 +3,13 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { typography } from "../globalstyles/fonts";
 import Logo1 from "../images/LogoCircle.png";
+import UniqueLogo from "../images/UniqueLogo.png";
 
 export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Header>
-        <Text style={{ fontSize: 20, fontWeight: "bold" }}>Minha Tela</Text>
+        <Image source={UniqueLogo}></Image>
       </Header>
 
       <View style={styles.boxtop}>
@@ -16,8 +17,10 @@ export default function HomeScreen() {
           <Image source={Logo1} style={styles.logocircle} />
         </View>
 
-        <Text style={[typography.title, { textAlign: "center" }]}>
-          Se prepare para uma nova{" "}
+        <Text
+          style={[typography.title, { textAlign: "center", paddingTop: 20 }]}
+        >
+          Se prepare para uma nova<br></br>{" "}
           <Text style={{ color: "#F05221" }}>experiência</Text>
         </Text>
       </View>
@@ -30,8 +33,14 @@ export default function HomeScreen() {
         </Text>
       </View>
       <View style={styles.boxbottom}>
-        <Button>
+        <Button width="80%">
           <Text style={typography.buttonText}>Cadastro</Text>
+        </Button>
+
+        <Button width="80%" variant="secondary">
+          <Text style={[typography.buttonText, { color: "#F05221" }]}>
+            Login
+          </Text>
         </Button>
       </View>
     </View>
@@ -57,7 +66,7 @@ const styles = StyleSheet.create({
   boxmid: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     paddingHorizontal: 30,
     width: "100%",
   },
@@ -66,6 +75,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    gap: 20,
+    width: "100%",
   },
 
   logoWrapper: {
@@ -80,7 +91,7 @@ const styles = StyleSheet.create({
 
     elevation: 12,
 
-    backgroundColor: "#fff", // necessário para sombra no iOS
+    backgroundColor: "#fff",
   },
 
   logocircle: {
