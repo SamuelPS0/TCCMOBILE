@@ -12,7 +12,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/instrument-sans";
 
-import { Inter_700Bold } from "@expo-google-fonts/inter";
+import { Inter_400Regular, Inter_700Bold } from "@expo-google-fonts/inter";
 
 import { useColorScheme } from "react-native";
 
@@ -26,6 +26,7 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     InstrumentSans_700Bold,
     Inter_700Bold,
+    Inter_400Regular,
   });
 
   if (!loaded) {
