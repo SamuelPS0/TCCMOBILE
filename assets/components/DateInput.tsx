@@ -16,7 +16,6 @@ export const DateInput = ({
   onChange,
   width = "100%",
 }: IDateInputProps) => {
-
   const [showPicker, setShowPicker] = useState(false);
 
   function handleChange(event: any, selectedDate?: Date) {
@@ -28,20 +27,10 @@ export const DateInput = ({
 
   return (
     <View style={[styles.container, { width }]}>
+      {label && <Text style={typography.inputlabel}>{label}</Text>}
 
-      {label && (
-        <Text style={typography.inputlabel}>
-          {label}
-        </Text>
-      )}
-
-      <Pressable
-        style={styles.input}
-        onPress={() => setShowPicker(true)}
-      >
-        <Text style={styles.text}>
-          {value.toLocaleDateString("pt-BR")}
-        </Text>
+      <Pressable style={styles.input} onPress={() => setShowPicker(true)}>
+        <Text style={styles.text}>{value.toLocaleDateString("pt-BR")}</Text>
       </Pressable>
 
       {showPicker && (
@@ -53,13 +42,11 @@ export const DateInput = ({
           onChange={handleChange}
         />
       )}
-
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-
   container: {
     marginVertical: 6,
     alignSelf: "center",
@@ -78,5 +65,4 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 16,
   },
-
 });

@@ -8,16 +8,9 @@ interface ICheckboxProps {
   onChange: (value: boolean) => void;
 }
 
-export const CheckboxInput = ({
-  label,
-  value,
-  onChange,
-}: ICheckboxProps) => {
+export const CheckboxInput = ({ label, value, onChange }: ICheckboxProps) => {
   return (
-    <Pressable
-      style={styles.container}
-      onPress={() => onChange(!value)}
-    >
+    <Pressable style={styles.container} onPress={() => onChange(!value)}>
       <ExpoCheckbox
         value={value}
         onValueChange={onChange}

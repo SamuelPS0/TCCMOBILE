@@ -1,7 +1,6 @@
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { typography } from "../globalstyles/fonts";
 
-
 interface IInputProps {
   label?: string; // label acima do input
   placeholder?: string;

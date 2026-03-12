@@ -18,27 +18,21 @@ export const SelectInput = ({
   width = "100%",
 }: ISelectProps) => {
   return (
-   <View style={[styles.container, { width }]}>
-  {label && <Text style={typography.inputlabel}>{label}</Text>}
+    <View style={[styles.container, { width }]}>
+      {label && <Text style={typography.inputlabel}>{label}</Text>}
 
-  <View style={styles.select}>
-    <Picker
-      selectedValue={selectedValue}
-      onValueChange={onValueChange}
-      style={styles.picker}
-    >
-      {options.map((opt) => (
-        <Picker.Item
-          key={opt.value}
-          label={opt.label}
-          value={opt.value}
-        />
-      ))}
-    </Picker>
-
-
-  </View>
-</View>
+      <View style={styles.select}>
+        <Picker
+          selectedValue={selectedValue}
+          onValueChange={onValueChange}
+          style={styles.picker}
+        >
+          {options.map((opt) => (
+            <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
+          ))}
+        </Picker>
+      </View>
+    </View>
   );
 };
 
@@ -55,12 +49,12 @@ const styles = StyleSheet.create({
     height: 50,
     justifyContent: "center",
     backgroundColor: "#fff",
-    overflow: "hidden"
+    overflow: "hidden",
   },
 
   picker: {
     width: "100%",
     height: 50,
-    textAlign: "center"
+    textAlign: "center",
   },
 });
