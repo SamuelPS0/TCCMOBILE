@@ -1,11 +1,13 @@
+import { useRouter } from "expo-router";
 import { Image, StyleSheet, Text, View } from "react-native";
-import { Button } from "../components/Button";
-import { Header } from "../components/Header";
-import { typography } from "../globalstyles/fonts";
-import Logo1 from "../images/LogoCircle.png";
-import UniqueLogo from "../images/UniqueLogo.png";
+import { Button } from "../../assets/components/Button";
+import { Header } from "../../assets/components/Header";
+import { typography } from "../../assets/globalstyles/fonts";
+import Logo1 from "../../assets/images/LogoCircle.png";
+import UniqueLogo from "../../assets/images/UniqueLogo.png";
 
 export default function HomeScreen() {
+  const router = useRouter();
   return (
     <View style={styles.container}>
       <Header>
@@ -20,7 +22,7 @@ export default function HomeScreen() {
         <Text
           style={[typography.title, { textAlign: "center", paddingTop: 20 }]}
         >
-          Se prepare para uma nova<br></br>{" "}
+          Se prepare para uma nova{" "}
           <Text style={{ color: "#F05221" }}>experiência</Text>
         </Text>
       </View>
@@ -33,11 +35,15 @@ export default function HomeScreen() {
         </Text>
       </View>
       <View style={styles.boxbottom}>
-        <Button width="80%">
+        <Button width="90%" onPress={() => router.push("/cadastro")}>
           <Text style={typography.buttonText}>Cadastro</Text>
         </Button>
 
-        <Button width="80%" variant="secondary">
+        <Button
+          width="90%"
+          variant="secondary"
+          onPress={() => router.push("/login")}
+        >
           <Text style={[typography.buttonText, { color: "#F05221" }]}>
             Login
           </Text>
@@ -72,7 +78,7 @@ const styles = StyleSheet.create({
   },
 
   boxbottom: {
-    flex: 1,
+    flex: 1.5,
     justifyContent: "center",
     alignItems: "center",
     gap: 20,

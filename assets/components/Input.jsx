@@ -35,8 +35,8 @@ export const Input = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 8, // espaço entre inputs
-    alignSelf: "center", // centraliza horizontalmente
+    marginVertical: 6,
+    alignSelf: "center",
   },
 
   input: {
