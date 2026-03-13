@@ -1,9 +1,11 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Picker } from "@react-native-picker/picker";
 import { StyleSheet, Text, View } from "react-native";
 import { typography } from "../globalstyles/fonts";
 
 interface ISelectProps {
   label?: string;
+  icon?: string;
   selectedValue: string;
   onValueChange: (value: string) => void;
   options: { label: string; value: string }[];
@@ -12,6 +14,7 @@ interface ISelectProps {
 
 export const SelectInput = ({
   label,
+  icon,
   selectedValue,
   onValueChange,
   options,
@@ -19,7 +22,12 @@ export const SelectInput = ({
 }: ISelectProps) => {
   return (
     <View style={[styles.container, { width }]}>
-      {label && <Text style={typography.inputlabel}>{label}</Text>}
+      {(label || icon) && (
+        <View style={styles.labelRow}>
+          {icon && <Ionicons name={icon} size={18} color="#666" />}
+          {label && <Text style={typography.inputlabel}>{label}</Text>}
+        </View>
+      )}
 
       <View style={styles.select}>
         <Picker
@@ -40,6 +48,13 @@ const styles = StyleSheet.create({
   container: {
     marginVertical: 6,
     alignSelf: "center",
+  },
+
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
   },
 
   select: {

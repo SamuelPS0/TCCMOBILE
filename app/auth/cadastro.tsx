@@ -79,7 +79,7 @@ export default function Cadastro() {
             placeholder="55"
             value={telefoneDDD}
             onChangeText={setTelefoneDDD}
-            width="20%"
+            width="21%"
           />
           <Input
             label=" "
@@ -145,7 +145,7 @@ export default function Cadastro() {
         />
 
         <View style={styles.buttonarea}>
-          <Button onPress={() => router.push("/seguranca")}>
+          <Button onPress={() => router.push("/auth/seguranca")}>
             <Text style={typography.buttonText}>Continuar</Text>
           </Button>
         </View>

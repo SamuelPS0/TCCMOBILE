@@ -85,7 +85,7 @@ export default function Seguranca() {
         />
       </View>
       <View style={styles.boxbottom}>
-        <Button onPress={() => router.push("/")}>
+        <Button onPress={() => router.push("/(tabs)")}>
           <Text style={typography.buttonText}>Continuar</Text>
         </Button>
       </View>

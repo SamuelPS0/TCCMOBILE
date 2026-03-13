@@ -35,14 +35,14 @@ export default function HomeScreen() {
         </Text>
       </View>
       <View style={styles.boxbottom}>
-        <Button width="90%" onPress={() => router.push("/cadastro")}>
+        <Button width="90%" onPress={() => router.push("/auth/cadastro")}>
           <Text style={typography.buttonText}>Cadastro</Text>
         </Button>
 
         <Button
           width="90%"
           variant="secondary"
-          onPress={() => router.push("/login")}
+          onPress={() => router.push("/auth/login")}
         >
           <Text style={[typography.buttonText, { color: "#F05221" }]}>
             Login

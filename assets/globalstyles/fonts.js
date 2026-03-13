@@ -14,9 +14,20 @@ export const typography = {
     color: "#747474",
   },
   alata: {
-    fontFamily: " Alata_400Regular",
+    fontFamily: "Alata_400Regular",
     fontSize: 36,
     fontWeight: "900",
     color: "#FF432A",
+  },
+  cardtitle: {
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 22,
+    fontWeight: "80",
+    color: "#FF432A",
+  },
+  cardtext: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
+    color: "#000000",
   },
 };

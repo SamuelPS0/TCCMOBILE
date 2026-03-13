@@ -1,3 +1,10 @@
+import { Alata_400Regular } from "@expo-google-fonts/alata";
+import {
+  Poppins_400Regular,
+  Poppins_600SemiBold,
+  Poppins_800ExtraBold,
+  useFonts,
+} from "@expo-google-fonts/poppins";
 import {
   DarkTheme,
   DefaultTheme,
@@ -7,11 +14,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
-import { Alata_400Regular, useFonts } from "@expo-google-fonts/alata";
-
-import {
-  InstrumentSans_700Bold
-} from "@expo-google-fonts/instrument-sans";
+import { InstrumentSans_700Bold } from "@expo-google-fonts/instrument-sans";
 
 import { Inter_400Regular, Inter_700Bold } from "@expo-google-fonts/inter";
 import { useColorScheme } from "react-native";
@@ -24,6 +27,9 @@ export default function RootLayout() {
     Inter_700Bold,
     Inter_400Regular,
     Alata_400Regular,
+    Poppins_400Regular,
+    Poppins_600SemiBold,
+    Poppins_800ExtraBold,
   });
 
   if (!loaded) {
