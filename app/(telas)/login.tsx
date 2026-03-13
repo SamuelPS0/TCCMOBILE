@@ -42,7 +42,7 @@ export default function Login() {
         />
       </View>
       <View style={styles.buttonarea}>
-        <Button onPress={() => router.push("/")}>
+        <Button onPress={() => router.replace("/(tabs)")}>
           <Text style={typography.buttonText}>Continuar</Text>
         </Button>
       </View>

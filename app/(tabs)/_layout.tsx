@@ -1,34 +1,99 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { useColorScheme } from "react-native";
+import { Text } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colorScheme === "dark" ? "#fff" : "#000",
+        animation: "shift",
+
+        tabBarActiveTintColor: "#F05221",
+        tabBarInactiveTintColor: "#999",
+
+        tabBarStyle: {
+          backgroundColor: "#fff",
+          height: "9%",
+          borderTopWidth: 0,
+        },
+
+        tabBarItemStyle: {
+          paddingVertical: 12,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+          tabBarLabel: ({ color }) => (
+            <Text
+              style={{
+                color,
+                fontSize: 12,
+                fontWeight: "600",
+              }}
+            >
+              Home
+            </Text>
           ),
+
+          tabBarIcon: ({ color, focused }) => {
+            const animatedStyle = useAnimatedStyle(() => ({
+              transform: [
+                {
+                  scale: withSpring(focused ? 1.25 : 1),
+                },
+              ],
+            }));
+
+            return (
+              <Animated.View style={animatedStyle}>
+                <Ionicons name="home" size={26} color={color} />
+              </Animated.View>
+            );
+          },
         }}
       />
 
       <Tabs.Screen
-        name="explore"
+        name="perfil"
         options={{
-          title: "Explore",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="paper-plane" size={size} color={color} />
+          tabBarLabel: ({ color }) => (
+            <Text
+              style={{
+                color,
+                fontSize: 12,
+                fontWeight: "600",
+              }}
+            >
+              Perfil
+            </Text>
           ),
+
+          tabBarIcon: ({ color, focused }) => {
+            const animatedStyle = useAnimatedStyle(() => ({
+              transform: [
+                {
+                  scale: withSpring(focused ? 1.25 : 1),
+                },
+              ],
+            }));
+
+            return (
+              <Animated.View style={animatedStyle}>
+                <Ionicons
+                  name="person-circle-outline"
+                  size={26}
+                  color={color}
+                />
+              </Animated.View>
+            );
+          },
         }}
       />
     </Tabs>

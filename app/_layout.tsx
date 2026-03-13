@@ -7,9 +7,10 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
+import { Alata_400Regular, useFonts } from "@expo-google-fonts/alata";
+
 import {
-  InstrumentSans_700Bold,
-  useFonts,
+  InstrumentSans_700Bold
 } from "@expo-google-fonts/instrument-sans";
 
 import { Inter_400Regular, Inter_700Bold } from "@expo-google-fonts/inter";
@@ -22,6 +23,7 @@ export default function RootLayout() {
     InstrumentSans_700Bold,
     Inter_700Bold,
     Inter_400Regular,
+    Alata_400Regular,
   });
 
   if (!loaded) {
@@ -30,15 +32,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(telas)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
-        />
-      </Stack>
-
+      <Stack screenOptions={{ headerShown: false }} />
       <StatusBar style="auto" />
     </ThemeProvider>
   );

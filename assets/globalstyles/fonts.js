@@ -13,4 +13,10 @@ export const typography = {
     fontSize: 15,
     color: "#747474",
   },
+  alata: {
+    fontFamily: " Alata_400Regular",
+    fontSize: 36,
+    fontWeight: "900",
+    color: "#FF432A",
+  },
 };
