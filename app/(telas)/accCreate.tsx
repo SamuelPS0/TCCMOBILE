@@ -1,6 +1,14 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { apicategoria } from "../../assets/api/apicategoria";
+import { ibgeapi } from "../../assets/api/ibge";
 import BottomNav from "../../assets/components/BottomNav";
 import { Button } from "../../assets/components/Button";
 import { Header } from "../../assets/components/Header";
@@ -13,26 +21,130 @@ import { typography } from "../../assets/globalstyles/fonts";
 export default function AccCreate() {
   const router = useRouter();
 
+  const [municipios, setMunicipios] = useState<string[]>([]);
+  const [municipiosFiltrados, setMunicipiosFiltrados] = useState<string[]>([]);
+
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [rede, setRede] = useState("");
-  const [local, setLocal] = useState("");
+  const [estado, setEstado] = useState("");
+  const [municipio, setMunicipio] = useState("");
   const [regiao, setRegiao] = useState("");
   const [categoria, setCategoria] = useState("");
 
-  // Redes sociais
+  useEffect(() => {
+    async function carregarMunicipios() {
+      if (!estado) return;
+
+      try {
+        const response = await ibgeapi.get(`/estados/${estado}/municipios`);
+
+        const lista = response.data.map((m: any) => m.nome);
+
+        setMunicipios(lista);
+        setMunicipiosFiltrados(lista);
+        setMunicipio("");
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    carregarMunicipios();
+  }, [estado]);
+
+  function handleMunicipioChange(text: string) {
+    setMunicipio(text);
+
+    const filtrados = municipios.filter((m) =>
+      m.toLowerCase().includes(text.toLowerCase()),
+    );
+
+    setMunicipiosFiltrados(filtrados);
+  }
+
+  function selecionarMunicipio(nome: string) {
+    setMunicipio(nome);
+    setMunicipiosFiltrados([]);
+  }
+
   const redesocial = [
     { label: "Whatsapp", value: "Whatsapp" },
     { label: "Instagram", value: "Instagram" },
     { label: "Facebook", value: "Facebook" },
   ];
 
-  // Categorias culinárias
   const categorias = [
     { label: "Padaria", value: "padaria" },
     { label: "Restaurante", value: "restaurante" },
     { label: "Café", value: "cafe" },
   ];
+
+  const estados = [
+    { sigla: "AC", nome: "Acre" },
+    { sigla: "AL", nome: "Alagoas" },
+    { sigla: "AP", nome: "Amapá" },
+    { sigla: "AM", nome: "Amazonas" },
+    { sigla: "BA", nome: "Bahia" },
+    { sigla: "CE", nome: "Ceará" },
+    { sigla: "DF", nome: "Distrito Federal" },
+    { sigla: "ES", nome: "Espírito Santo" },
+    { sigla: "GO", nome: "Goiás" },
+    { sigla: "MA", nome: "Maranhão" },
+    { sigla: "MT", nome: "Mato Grosso" },
+    { sigla: "MS", nome: "Mato Grosso do Sul" },
+    { sigla: "MG", nome: "Minas Gerais" },
+    { sigla: "PA", nome: "Pará" },
+    { sigla: "PB", nome: "Paraíba" },
+    { sigla: "PR", nome: "Paraná" },
+    { sigla: "PE", nome: "Pernambuco" },
+    { sigla: "PI", nome: "Piauí" },
+    { sigla: "RJ", nome: "Rio de Janeiro" },
+    { sigla: "RN", nome: "Rio Grande do Norte" },
+    { sigla: "RS", nome: "Rio Grande do Sul" },
+    { sigla: "RO", nome: "Rondônia" },
+    { sigla: "RR", nome: "Roraima" },
+    { sigla: "SC", nome: "Santa Catarina" },
+    { sigla: "SP", nome: "São Paulo" },
+    { sigla: "SE", nome: "Sergipe" },
+    { sigla: "TO", nome: "Tocantins" },
+  ];
+
+  const [categoriasApi, setCategoriasApi] = useState<any[]>([]);
+  const [categoriasFiltradas, setCategoriasFiltradas] = useState<any[]>([]);
+  const [categoriaInput, setCategoriaInput] = useState("");
+
+  useEffect(() => {
+    async function carregarCategorias() {
+      try {
+        const response = await apicategoria.get("/");
+
+        const lista = response.data.filter((c: any) => c.statusCategoria);
+
+        setCategoriasApi(lista);
+        setCategoriasFiltradas(lista);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    carregarCategorias();
+  }, []);
+
+  function handleCategoriaChange(text: string) {
+    setCategoriaInput(text);
+
+    const filtradas = categoriasApi.filter((c) =>
+      c.nome.toLowerCase().includes(text.toLowerCase()),
+    );
+
+    setCategoriasFiltradas(filtradas);
+  }
+
+  function selecionarCategoria(cat: any) {
+    setCategoria(cat.id);
+    setCategoriaInput(cat.nome);
+    setCategoriasFiltradas([]);
+  }
 
   return (
     <View style={styles.screen}>
@@ -45,14 +157,12 @@ export default function AccCreate() {
         contentContainerStyle={styles.content}
       >
         <View>
-          {/* Foto de perfil */}
           <View
             style={{ alignItems: "center", marginBottom: 20, marginTop: 10 }}
           >
             <ProfilePhoto size={120} />
           </View>
 
-          {/* Inputs */}
           <Input
             label="Nome"
             icon="person-outline"
@@ -60,6 +170,7 @@ export default function AccCreate() {
             value={nome}
             onChangeText={setNome}
           />
+
           <Input
             label="Descrição"
             icon="document-text-outline"
@@ -68,13 +179,48 @@ export default function AccCreate() {
             value={descricao}
             onChangeText={setDescricao}
           />
-          <Input
-            label="Local"
-            icon="location-outline"
-            placeholder="Digite a região..."
-            value={local}
-            onChangeText={setLocal}
-          />
+
+          <View style={styles.rowInputs}>
+            <SelectInput
+              label="Local"
+              icon="location-outline"
+              selectedValue={estado}
+              onValueChange={setEstado}
+              options={estados.map((estado) => ({
+                label: `${estado.sigla} - ${estado.nome}`,
+                value: estado.sigla,
+              }))}
+              width={"31%"}
+            />
+
+            <View style={styles.municipioContainer}>
+              <Input
+                label=" "
+                placeholder="Município"
+                value={municipio}
+                onChangeText={handleMunicipioChange}
+              />
+
+              {estado &&
+                municipio.length > 0 &&
+                municipiosFiltrados.length > 0 && (
+                  <View style={styles.sugestoes}>
+                    <ScrollView nestedScrollEnabled>
+                      {municipiosFiltrados.slice(0, 8).map((m) => (
+                        <TouchableOpacity
+                          key={m}
+                          onPress={() => selecionarMunicipio(m)}
+                          style={styles.sugestaoItem}
+                        >
+                          <Text style={styles.sugestaoTexto}>{m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+            </View>
+          </View>
+
           <Input
             label="Região"
             icon="compass-outline"
@@ -83,7 +229,6 @@ export default function AccCreate() {
             onChangeText={setRegiao}
           />
 
-          {/* SelectInput redes sociais */}
           <SelectInput
             label="Contato"
             icon="call-outline"
@@ -92,23 +237,38 @@ export default function AccCreate() {
             options={redesocial}
           />
 
-          {/* SelectInput categorias culinárias */}
-          <SelectInput
-            label="Categoria"
-            icon="restaurant-outline"
-            selectedValue={categoria}
-            onValueChange={setCategoria}
-            options={categorias}
-          />
+          <View style={styles.categoriaContainer}>
+            <Input
+              label="Categoria"
+              icon="restaurant-outline"
+              placeholder="Digite a categoria..."
+              value={categoriaInput}
+              onChangeText={handleCategoriaChange}
+            />
 
-          {/* Upload de imagem */}
+            {categoriaInput.length > 0 && categoriasFiltradas.length > 0 && (
+              <View style={styles.sugestoes}>
+                <ScrollView nestedScrollEnabled>
+                  {categoriasFiltradas.slice(0, 8).map((c) => (
+                    <TouchableOpacity
+                      key={c.id}
+                      onPress={() => selecionarCategoria(c)}
+                      style={styles.sugestaoItem}
+                    >
+                      <Text style={styles.sugestaoTexto}>{c.nome}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+
           <ImageUpload
             label="Foto do evento"
             icon="camera-outline"
             height={200}
           />
 
-          {/* Botão de concluir */}
           <View style={{ marginTop: 30, alignItems: "center" }}>
             <Button onPress={() => router.push("/(tabs)")}>
               <Text style={typography.buttonText}>Concluir</Text>
@@ -124,6 +284,52 @@ export default function AccCreate() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
+
   container: { flex: 1 },
+
   content: { padding: 20, gap: 20 },
+
+  rowInputs: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+
+  municipioContainer: {
+    width: "65%",
+    position: "relative",
+  },
+
+  sugestoes: {
+    position: "absolute",
+    top: 55,
+    width: "100%",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    maxHeight: 200,
+    zIndex: 1000,
+
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+
+  sugestaoItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+
+  sugestaoTexto: {
+    fontSize: 14,
+  },
+
+  categoriaContainer: {
+    position: "relative",
+    width: "100%",
+  },
 });
