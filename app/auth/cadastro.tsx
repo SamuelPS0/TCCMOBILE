@@ -24,6 +24,15 @@ export default function Cadastro() {
 
   const router = useRouter();
 
+  {/*const response = await axios.post('http://localhost:8080/api/v1/Usuario', {
+  nome: data.name,
+  email: data.email,
+  senha: data.password,
+  nivelAcesso: accessLevels.CLIENTE,  // String "CLIENTE", exato
+  dataCadastro: '2025-09-22T12:00:00', // sem o "Z" no final (sem timezone)
+  statusUsuario: true,
+});*/}
+
   const estados = [
     { label: "Acre", value: "AC" },
     { label: "Alagoas", value: "AL" },

@@ -73,11 +73,6 @@ export default function AccCreate() {
     { label: "Facebook", value: "Facebook" },
   ];
 
-  const categorias = [
-    { label: "Padaria", value: "padaria" },
-    { label: "Restaurante", value: "restaurante" },
-    { label: "Café", value: "cafe" },
-  ];
 
   const estados = [
     { sigla: "AC", nome: "Acre" },
@@ -110,18 +105,21 @@ export default function AccCreate() {
   ];
 
   const [categoriasApi, setCategoriasApi] = useState<any[]>([]);
-  const [categoriasFiltradas, setCategoriasFiltradas] = useState<any[]>([]);
-  const [categoriaInput, setCategoriaInput] = useState("");
 
   useEffect(() => {
     async function carregarCategorias() {
       try {
-        const response = await apicategoria.get("/");
+        const response = await apicategoria.get("");
 
-        const lista = response.data.filter((c: any) => c.statusCategoria);
+        const lista = response.data
+          .filter((c: any) => c.statusCategoria)
+          .map((c: any) => ({
+            label: c.nome,
+            value: c.id,
+          }));
 
         setCategoriasApi(lista);
-        setCategoriasFiltradas(lista);
+
       } catch (error) {
         console.log(error);
       }
@@ -130,21 +128,6 @@ export default function AccCreate() {
     carregarCategorias();
   }, []);
 
-  function handleCategoriaChange(text: string) {
-    setCategoriaInput(text);
-
-    const filtradas = categoriasApi.filter((c) =>
-      c.nome.toLowerCase().includes(text.toLowerCase()),
-    );
-
-    setCategoriasFiltradas(filtradas);
-  }
-
-  function selecionarCategoria(cat: any) {
-    setCategoria(cat.id);
-    setCategoriaInput(cat.nome);
-    setCategoriasFiltradas([]);
-  }
 
   return (
     <View style={styles.screen}>
@@ -238,29 +221,17 @@ export default function AccCreate() {
           />
 
           <View style={styles.categoriaContainer}>
-            <Input
+            <SelectInput
               label="Categoria"
               icon="restaurant-outline"
-              placeholder="Digite a categoria..."
-              value={categoriaInput}
-              onChangeText={handleCategoriaChange}
+              selectedValue={categoria}
+              onValueChange={(value) => setCategoria(value)}
+              options={categoriasApi}
             />
 
-            {categoriaInput.length > 0 && categoriasFiltradas.length > 0 && (
-              <View style={styles.sugestoes}>
-                <ScrollView nestedScrollEnabled>
-                  {categoriasFiltradas.slice(0, 8).map((c) => (
-                    <TouchableOpacity
-                      key={c.id}
-                      onPress={() => selecionarCategoria(c)}
-                      style={styles.sugestaoItem}
-                    >
-                      <Text style={styles.sugestaoTexto}>{c.nome}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+
+
+
           </View>
 
           <ImageUpload
