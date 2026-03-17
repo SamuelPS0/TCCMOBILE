@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { apicategoria } from "../../assets/api/apicategoria";
+import { globalapi } from "../../assets/api/globalapi";
 import { ibgeapi } from "../../assets/api/ibge";
 import BottomNav from "../../assets/components/BottomNav";
 import { Button } from "../../assets/components/Button";
@@ -109,7 +109,7 @@ export default function AccCreate() {
   useEffect(() => {
     async function carregarCategorias() {
       try {
-        const response = await apicategoria.get("");
+        const response = await globalapi.get("categoria");
 
         const lista = response.data
           .filter((c: any) => c.statusCategoria)
