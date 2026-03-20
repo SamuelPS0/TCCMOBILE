@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardTypeOptions, StyleSheet, Text, TextInput, View } from "react-native";
 import { typography } from "../globalstyles/fonts";
 
 interface IInputProps {
@@ -11,6 +11,9 @@ interface IInputProps {
   value: string;
   onChangeText: (text: string) => void;
   width?: number | string;
+  keyboardType?: KeyboardTypeOptions;
+  secureTextEntry?: boolean;
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
 }
 
 export const Input = ({
@@ -22,6 +25,9 @@ export const Input = ({
   value,
   onChangeText,
   width = "100%",
+  keyboardType,
+  secureTextEntry,
+  autoCapitalize,
 }: IInputProps) => {
   return (
     <View style={[styles.container, { width }]}>
@@ -33,14 +39,17 @@ export const Input = ({
         </View>
       )}
 
-      <TextInput
-        style={[styles.input, multiline && styles.textarea]}
-        placeholder={placeholder}
-        placeholderTextColor={placeholderColor}
-        value={value}
-        onChangeText={onChangeText}
-        multiline={multiline}
-      />
+<TextInput
+  style={[styles.input, multiline && styles.textarea]}
+  placeholder={placeholder}
+  placeholderTextColor={placeholderColor}
+  value={value}
+  onChangeText={onChangeText}
+  multiline={multiline}
+  keyboardType={keyboardType}
+  secureTextEntry={secureTextEntry}
+  autoCapitalize={autoCapitalize}
+/>
     </View>
   );
 };

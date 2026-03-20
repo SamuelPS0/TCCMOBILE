@@ -76,25 +76,25 @@ export default function TabLayout() {
             </Text>
           ),
 
-          tabBarIcon: ({ color, focused }) => {
-            const animatedStyle = useAnimatedStyle(() => ({
-              transform: [
-                {
-                  scale: withSpring(focused ? 1.25 : 1),
-                },
-              ],
-            }));
+            tabBarIcon: ({ color, focused }) => {
+              const animatedStyle = useAnimatedStyle(() => ({
+                transform: [
+                  {
+                    scale: withSpring(focused ? 1.25 : 1),
+                  },
+                ],
+              }));
 
-            return (
-              <Animated.View style={animatedStyle}>
-                <Ionicons
-                  name="person-circle-outline"
-                  size={26}
-                  color={color}
-                />
-              </Animated.View>
-            );
-          },
+              return (
+                <Animated.View style={animatedStyle}>
+                  <Ionicons
+                    name="person-circle-outline"
+                    size={26}
+                    color={color}
+                  />
+                </Animated.View>
+              );
+            },
         }}
       />
     </Tabs>

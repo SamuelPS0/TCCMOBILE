@@ -12,4 +12,3 @@ const globalapi = axios.create({
 
 
 export { globalapi };
-

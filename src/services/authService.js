@@ -20,4 +20,3 @@ export const loginRequest = async (email, senha) => {
   }
 
   return usuarioEncontrado;
-};

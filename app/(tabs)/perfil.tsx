@@ -51,17 +51,17 @@ export default function Perfil() {
             </Pressable>
 
             <Pressable
-              style={styles.buttons}
-              onPress={() => router.push("/(telas)")}
-            >
-              <Ionicons
-                name="log-out-outline"
-                size={24}
-                color="#333"
-                style={{ marginRight: 18, marginLeft: 12 }}
-              />
-              <Text style={typography.cardtext}>Desconectar</Text>
-            </Pressable>
+  style={styles.buttons}
+  onPress={() => router.push("/(telas)")}
+>
+  <Ionicons
+    name="log-out-outline"
+    size={24}
+    color="#333"
+    style={{ marginRight: 18, marginLeft: 12 }}
+  />
+  <Text style={typography.cardtext}>Desconectar</Text>
+</Pressable>
           </View>
         </View>
       </ImageBackground>

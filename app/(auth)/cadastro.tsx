@@ -1,7 +1,17 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+import { globalapi } from "../../assets/api/globalapi";
+
 import { Button } from "../../assets/components/Button";
 import { DateInput } from "../../assets/components/DateInput";
 import { Header } from "../../assets/components/Header";
@@ -10,8 +20,6 @@ import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
 
 export default function Cadastro() {
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
   const [nome, setNome] = useState("");
   const [telefoneDDD, setTelefoneDDD] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -19,19 +27,89 @@ export default function Cadastro() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [gender, setGender] = useState("");
-  const [birthDate, setBirthDate] = useState(new Date());
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [estado, setEstado] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const router = useRouter();
 
-  {/*const response = await axios.post('http://localhost:8080/api/v1/Usuario', {
-  nome: data.name,
-  email: data.email,
-  senha: data.password,
-  nivelAcesso: accessLevels.CLIENTE,  // String "CLIENTE", exato
-  dataCadastro: '2025-09-22T12:00:00', // sem o "Z" no final (sem timezone)
-  statusUsuario: true,
-});*/}
+function formatDate(date: Date) {
+  const pad = (n: number) => n.toString().padStart(2, "0");
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
+    date.getSeconds()
+  )}`;
+}
+
+  const handleSubmit = async () => {
+    if (loading) return;
+
+    if (!nome.trim() || !email.trim() || !senha || !cpf.trim()) {
+      alert("Preencha os campos obrigatórios");
+      return;
+    }
+
+    if (!birthDate) {
+      alert("Informe a data de nascimento");
+      return;
+    }
+
+    if (senha.length < 6) {
+      alert("Senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+
+    if (!email.includes("@")) {
+      alert("Email inválido");
+      return;
+    }
+
+    if (telefone.length < 8) {
+      alert("Telefone inválido");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const payload = {
+        nome: nome.trim(),
+        email: email.trim().toLowerCase(),
+        senha: senha,
+        nivelAcesso: "PRESTADOR",
+        dataCadastro: formatDate(new Date()),
+        statusUsuario: true,
+      };
+
+      const response = await globalapi.post("Usuario", payload);
+
+      const userId = response?.data?.id;
+
+      if (!userId) {
+        throw new Error("ID do usuário não retornado");
+      }
+
+      router.push({
+        pathname: "/(auth)/seguranca",
+        params: { userId },
+      });
+
+    } catch (error) {
+      console.log(error);
+
+      if (error.response?.status === 400) {
+        alert("Dados inválidos ou email já cadastrado");
+      } else if (error.response?.status === 409) {
+        alert("Email já está em uso");
+      } else {
+        alert("Erro ao criar conta. Tente novamente.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const estados = [
     { label: "Acre", value: "AC" },
@@ -72,123 +150,119 @@ export default function Cadastro() {
       <Pressable style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back-outline" size={24} color="black" />
       </Pressable>
-      <View style={styles.inputContainer}>
-        {/* Nome */}
-        <Input
-          label="Nome*"
-          placeholder="Digite seu nome"
-          value={nome}
-          onChangeText={setNome}
-        />
 
-        {/* Telefone (DDD + Número) */}
-        <View style={styles.rowInputs}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.inputContainer}>
+          <Input label="Nome*" value={nome} onChangeText={setNome} />
+
+          <View style={styles.rowInputs}>
+            <Input
+              label="Telefone*"
+              value={telefoneDDD}
+              onChangeText={setTelefoneDDD}
+              width="21%"
+              keyboardType="numeric"
+            />
+            <Input
+              label=" "
+              value={telefone}
+              onChangeText={setTelefone}
+              width="75%"
+              keyboardType="numeric"
+            />
+          </View>
+
+          <Input label="CPF*" value={cpf} onChangeText={setCpf} />
+
           <Input
-            label="Telefone*"
-            placeholder="55"
-            value={telefoneDDD}
-            onChangeText={setTelefoneDDD}
-            width="21%"
+            label="Email*"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
           />
+
           <Input
-            label=" "
-            placeholder="Digite seu telefone"
-            value={telefone}
-            onChangeText={setTelefone}
-            width="75%"
+            label="Senha*"
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry
           />
-        </View>
 
-        {/* CPF */}
-        <Input
-          label="CPF*"
-          placeholder="Digite seu CPF"
-          value={cpf}
-          onChangeText={setCpf}
-        />
+          <View style={styles.rowInputs}>
+            <DateInput
+  label="Data de nascimento*"
+  value={birthDate || new Date()}
+  onChange={(date: Date) => setBirthDate(date)}
+  width="48%"
+/>
 
-        {/* Email */}
-        <Input
-          label="Email*"
-          placeholder="Digite seu email"
-          value={email}
-          onChangeText={setEmail}
-        />
-
-        {/* Senha */}
-        <Input
-          label="Senha*"
-          placeholder="Digite sua senha"
-          value={senha}
-          onChangeText={setSenha}
-        />
-
-        {/* Data de Nascimento + Gênero */}
-        <View style={styles.rowInputs}>
-          <DateInput
-            label="Data de nascimento*"
-            value={birthDate}
-            onChange={setBirthDate}
-            width="48%"
-          />
+            <SelectInput
+              label="Gênero"
+              selectedValue={gender}
+              onValueChange={setGender}
+              width="48%"
+              options={[
+                { label: "Masculino", value: "m" },
+                { label: "Feminino", value: "f" },
+                { label: "Outro", value: "o" },
+              ]}
+            />
+          </View>
 
           <SelectInput
-            label="Gênero"
-            selectedValue={gender}
-            onValueChange={setGender}
-            width="48%"
-            options={[
-              { label: "Masculino", value: "m" },
-              { label: "Feminino", value: "f" },
-              { label: "Outro", value: "o" },
-            ]}
+            label="Estado"
+            selectedValue={estado}
+            onValueChange={setEstado}
+            options={estados}
           />
-        </View>
 
-        {/* Estado */}
-        <SelectInput
-          label="Estado"
-          selectedValue={estado}
-          onValueChange={setEstado}
-          options={estados}
-        />
-
-        <View style={styles.buttonarea}>
-          <Button onPress={() => router.push("/auth/seguranca")}>
-            <Text style={typography.buttonText}>Continuar</Text>
-          </Button>
+          <View style={styles.buttonarea}>
+            <Button onPress={handleSubmit}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={typography.buttonText}>Continuar</Text>
+              )}
+            </Button>
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
+  container: { flex: 1, backgroundColor: "#fff" },
+
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
 
   backButton: {
     position: "absolute",
     left: 25,
     top: 68,
+    zIndex: 1,
   },
 
   inputContainer: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
-    gap: 2,
+    gap: 8,
   },
+
   rowInputs: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+
   buttonarea: {
-    flex: 1,
-    justifyContent: "center",
-    paddingBottom: 10,
+    marginTop: 20,
   },
 });
