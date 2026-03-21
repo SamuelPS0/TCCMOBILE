@@ -8,8 +8,7 @@ import { Input } from "../../assets/components/Input";
 import { typography } from "../../assets/globalstyles/fonts";
 import LogoExtenso from "../../assets/images/LogoExtenso.png";
 
-
-  export default function Login() {
+export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");

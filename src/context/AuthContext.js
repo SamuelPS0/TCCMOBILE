@@ -25,25 +25,23 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, []);
 
+  const login = async (userData) => {
+    try {
+      setUser(userData);
+      await AsyncStorage.setItem("user", JSON.stringify(userData));
+    } catch (error) {
+      console.log("Erro ao salvar usuário:", error);
+    }
+  };
 
-const login = async (userData) => {
-  try {
-    setUser(userData);
-    await AsyncStorage.setItem("user", JSON.stringify(userData));
-  } catch (error) {
-    console.log("Erro ao salvar usuário:", error);
-  }
-};
-
-
-const logout = async () => {
-  try {
-    setUser(null);
-    await AsyncStorage.removeItem("user");
-  } catch (error) {
-    console.log("Erro ao remover usuário:", error);
-  }
-};
+  const logout = async () => {
+    try {
+      setUser(null);
+      await AsyncStorage.removeItem("user");
+    } catch (error) {
+      console.log("Erro ao remover usuário:", error);
+    }
+  };
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>

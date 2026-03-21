@@ -24,7 +24,6 @@ import { Inter_400Regular, Inter_700Bold } from "@expo-google-fonts/inter";
 
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 
-
 // 🔹 Wrapper principal
 export default function RootLayout() {
   return (
@@ -34,8 +33,6 @@ export default function RootLayout() {
   );
 }
 
-
-// 🔹 Navegação + proteção de rotas
 function RootNavigation() {
   const colorScheme = useColorScheme();
 
@@ -53,26 +50,24 @@ function RootNavigation() {
     Poppins_800ExtraBold,
   });
 
-useEffect(() => {
-  if (loading || !segments.length) return;
+  useEffect(() => {
+    if (loading || !segments.length) return;
 
-  const inAuthGroup = segments[0] === "(auth)";
+    const inAuthGroup = segments[0] === "(auth)";
 
-  // 🔥 força abrir no index público
-  if (!user && segments[0] === undefined) {
-    router.replace("/(auth)");
-    return;
-  }
+    if (!user && segments[0] === undefined) {
+      router.replace("/(auth)");
+      return;
+    }
 
-  if (!user && !inAuthGroup) {
-    router.replace("/(auth)");
-  }
+    if (!user && !inAuthGroup) {
+      router.replace("/(auth)");
+    }
 
-  if (user && inAuthGroup) {
-    router.replace("/(tabs)");
-  }
-
-}, [user, segments, loading, router]);
+    if (user && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [user, segments, loading, router]);
 
   if (!loaded) return null;
 
