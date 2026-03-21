@@ -1,25 +1,55 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+
 import { Button } from "../../assets/components/Button";
 import { CheckboxInput } from "../../assets/components/CheckboxInput";
 import { Header } from "../../assets/components/Header";
 import { Input } from "../../assets/components/Input";
 import { typography } from "../../assets/globalstyles/fonts";
+import { useAuth } from "../../src/context/AuthContext";
 
 export default function Seguranca() {
   const router = useRouter();
+  const { login } = useAuth();
+  const params = useLocalSearchParams();
+
   const [chave1, setChave1] = useState("");
+  const [chave2, setChave2] = useState("");
   const [acceptTerms1, setAcceptTerms1] = useState(false);
   const [acceptTerms2, setAcceptTerms2] = useState(false);
-  const [chave2, setChave2] = useState("");
+
+  const handleContinue = async () => {
+    if (!chave1.trim() || !chave2.trim()) {
+      Alert.alert("Atenção", "Preencha as perguntas de segurança.");
+      return;
+    }
+
+    if (!acceptTerms1 || !acceptTerms2) {
+      Alert.alert("Atenção", "Você precisa aceitar os termos para continuar.");
+      return;
+    }
+
+    // login simples após cadastro
+    const userData = {
+      id: params.userId ?? null,
+      nome: "Usuário",
+      email: "",
+      nivelAcesso: "PRESTADOR",
+      statusUsuario: true,
+    };
+
+    await login(userData);
+    router.replace("/(tabs)");
+  };
 
   return (
     <View style={styles.container}>
       <Header>
         <Text style={typography.title}>Cadastro</Text>
       </Header>
+
       <Pressable style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back-outline" size={24} color="black" />
       </Pressable>
@@ -29,11 +59,12 @@ export default function Seguranca() {
           Perguntas de segurança
         </Text>
       </View>
+
       <View style={styles.inputarea}>
         <Input
           label="Qual o nome completo da sua mãe?*"
           placeholder="Digite aqui..."
-          width={"90%"}
+          width="90%"
           value={chave1}
           onChangeText={setChave1}
         />
@@ -41,22 +72,18 @@ export default function Seguranca() {
         <Input
           label="Qual nome do seu melhor amigo(a) de infância?*"
           placeholder="Digite aqui..."
-          width={"90%"}
+          width="90%"
           value={chave2}
           onChangeText={setChave2}
         />
       </View>
+
       <View style={styles.checkboxes}>
         <CheckboxInput
           label={
             <Text>
               Li e aceito os Termos de Uso e a{" "}
-              <Text
-                style={{
-                  color: "#007AFF",
-                  fontWeight: "500",
-                }}
-              >
+              <Text style={{ color: "#007AFF", fontWeight: "500" }}>
                 Política de Privacidade
               </Text>
             </Text>
@@ -64,6 +91,7 @@ export default function Seguranca() {
           value={acceptTerms1}
           onChange={setAcceptTerms1}
         />
+
         <CheckboxInput
           label={
             <Text>
@@ -84,14 +112,16 @@ export default function Seguranca() {
           onChange={setAcceptTerms2}
         />
       </View>
+
       <View style={styles.boxbottom}>
-        <Button onPress={() => router.push("/(tabs)")}>
+        <Button onPress={handleContinue}>
           <Text style={typography.buttonText}>Continuar</Text>
         </Button>
       </View>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

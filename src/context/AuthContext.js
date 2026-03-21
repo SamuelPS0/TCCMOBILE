@@ -3,6 +3,8 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext();
 
+const STORAGE_KEY = "auth_user";
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -10,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const storedUser = await AsyncStorage.getItem("user");
+        const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
 
         if (storedUser) {
           setUser(JSON.parse(storedUser));
@@ -28,7 +30,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (userData) => {
     try {
       setUser(userData);
-      await AsyncStorage.setItem("user", JSON.stringify(userData));
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
     } catch (error) {
       console.log("Erro ao salvar usuário:", error);
     }
@@ -37,7 +39,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       setUser(null);
-      await AsyncStorage.removeItem("user");
+      await AsyncStorage.removeItem(STORAGE_KEY);
     } catch (error) {
       console.log("Erro ao remover usuário:", error);
     }

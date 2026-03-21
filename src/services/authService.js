@@ -3,12 +3,12 @@ import { globalapi } from "../../assets/api/globalapi";
 export const loginRequest = async (email, senha) => {
   const response = await globalapi.get("/Usuario");
 
-  const usuarios = response.data;
+  const usuarios = Array.isArray(response.data) ? response.data : [];
 
   const usuarioEncontrado = usuarios.find(
     (u) =>
-      u.email.toLowerCase().trim() === email.toLowerCase().trim() &&
-      u.senha === senha
+      u?.email?.toLowerCase()?.trim() === email.toLowerCase().trim() &&
+      u?.senha === senha,
   );
 
   if (!usuarioEncontrado) {
@@ -19,4 +19,12 @@ export const loginRequest = async (email, senha) => {
     throw new Error("USER_INACTIVE");
   }
 
-  return usuarioEncontrado;
+  // Retorna só os dados necessários para sessão
+  return {
+    id: usuarioEncontrado.id,
+    nome: usuarioEncontrado.nome,
+    email: usuarioEncontrado.email,
+    nivelAcesso: usuarioEncontrado.nivelAcesso,
+    statusUsuario: usuarioEncontrado.statusUsuario,
+  };
+};
