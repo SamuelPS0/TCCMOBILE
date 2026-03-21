@@ -1,13 +1,16 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface ImageUploadProps {
   label?: string;
-  icon?: string; // nova prop para ícone
+  icon?: any;
   width?: number | string;
   height?: number;
+  imageUri?: string | null;
+  onChangeImage?: (data: { uri: string; base64: string | null }) => void;
+  editable?: boolean;
 }
 
 export const ImageUpload = ({
@@ -15,12 +18,16 @@ export const ImageUpload = ({
   icon,
   width = "100%",
   height = 150,
+  imageUri = null,
+  onChangeImage,
+  editable = true,
 }: ImageUploadProps) => {
-  const [imageUri, setImageUri] = useState<string | null>(null);
-
   const pickImage = async () => {
+    if (!editable) return;
+
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (!permissionResult.granted) {
       alert("Permissão para acessar fotos é necessária!");
       return;
@@ -28,11 +35,17 @@ export const ImageUpload = ({
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
+      quality: 0.8,
+      base64: true,
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const asset = result.assets[0];
+
+      onChangeImage?.({
+        uri: asset.uri,
+        base64: asset.base64 ?? null,
+      });
     }
   };
 
@@ -55,6 +68,7 @@ export const ImageUpload = ({
       <TouchableOpacity
         style={[styles.uploadBox, { height }]}
         onPress={pickImage}
+        activeOpacity={0.8}
       >
         {imageUri ? (
           <Image

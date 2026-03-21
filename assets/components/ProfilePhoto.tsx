@@ -1,17 +1,26 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React from "react";
 import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface ProfilePhotoProps {
-  size?: number; // diâmetro da foto
+  size?: number;
+  imageUri?: string | null;
+  onChangeImage?: (data: { uri: string; base64: string | null }) => void;
+  editable?: boolean;
 }
 
-export const ProfilePhoto = ({ size = 100 }: ProfilePhotoProps) => {
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
-
+export const ProfilePhoto = ({
+  size = 100,
+  imageUri = null,
+  onChangeImage,
+  editable = true,
+}: ProfilePhotoProps) => {
   const pickPhoto = async () => {
+    if (!editable) return;
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (!permission.granted) {
       alert("Permissão necessária para acessar fotos!");
       return;
@@ -19,19 +28,29 @@ export const ProfilePhoto = ({ size = 100 }: ProfilePhotoProps) => {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
+      quality: 0.8,
+      base64: true,
     });
 
     if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
+      const asset = result.assets[0];
+
+      onChangeImage?.({
+        uri: asset.uri,
+        base64: asset.base64 ?? null,
+      });
     }
   };
 
   return (
-    <TouchableOpacity onPress={pickPhoto} style={{ width: size, height: size }}>
-      {photoUri ? (
+    <TouchableOpacity
+      onPress={pickPhoto}
+      style={{ width: size, height: size }}
+      activeOpacity={0.8}
+    >
+      {imageUri ? (
         <Image
-          source={{ uri: photoUri }}
+          source={{ uri: imageUri }}
           style={{ width: size, height: size, borderRadius: size / 2 }}
         />
       ) : (
