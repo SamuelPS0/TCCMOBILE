@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { buscarCep } from "../../assets/api/apiviacep";
 import { globalapi } from "../../assets/api/globalapi";
-import { ibgeapi } from "../../assets/api/ibge";
 import BottomNav from "../../assets/components/BottomNav";
 import { Button } from "../../assets/components/Button";
 import { Header } from "../../assets/components/Header";
@@ -21,50 +21,69 @@ import { typography } from "../../assets/globalstyles/fonts";
 export default function AccCreate() {
   const router = useRouter();
 
-  const [municipios, setMunicipios] = useState<string[]>([]);
-  const [municipiosFiltrados, setMunicipiosFiltrados] = useState<string[]>([]);
-
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [rede, setRede] = useState("");
+
   const [estado, setEstado] = useState("");
   const [municipio, setMunicipio] = useState("");
-  const [regiao, setRegiao] = useState("");
+
   const [categoria, setCategoria] = useState("");
 
-  useEffect(() => {
-    async function carregarMunicipios() {
-      if (!estado) return;
+  const [cep, setCep] = useState("");
+  const [logradouro, setLogradouro] = useState("");
+  const [numero, setNumero] = useState("");
+  const [complemento, setComplemento] = useState("");
+  const [bairro, setBairro] = useState("");
 
-      try {
-        const response = await ibgeapi.get(`/estados/${estado}/municipios`);
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [erroCep, setErroCep] = useState("");
 
-        const lista = response.data.map((m: any) => m.nome);
+  // CONTATOS DINÂMICOS
+  const [contatos, setContatos] = useState([]);
+  const [tipoSelecionado, setTipoSelecionado] = useState("");
+  const [valorContato, setValorContato] = useState("");
 
-        setMunicipios(lista);
-        setMunicipiosFiltrados(lista);
-        setMunicipio("");
-      } catch (error) {
-        console.log(error);
-      }
+  async function handleCepChange(text) {
+    const cepLimpo = text.replace(/\D/g, "");
+    setCep(cepLimpo);
+
+    if (cepLimpo.length !== 8) return;
+
+    try {
+      setLoadingCep(true);
+      setErroCep("");
+
+      const data = await buscarCep(cepLimpo);
+
+      setEstado(data.uf || "");
+      setMunicipio(data.localidade || "");
+      setLogradouro(data.logradouro || "");
+      setBairro(data.bairro || "");
+    } catch (error) {
+      setErroCep("CEP inválido ou não encontrado");
+    } finally {
+      setLoadingCep(false);
     }
-
-    carregarMunicipios();
-  }, [estado]);
-
-  function handleMunicipioChange(text: string) {
-    setMunicipio(text);
-
-    const filtrados = municipios.filter((m) =>
-      m.toLowerCase().includes(text.toLowerCase()),
-    );
-
-    setMunicipiosFiltrados(filtrados);
   }
 
-  function selecionarMunicipio(nome: string) {
-    setMunicipio(nome);
-    setMunicipiosFiltrados([]);
+  function adicionarContato() {
+    if (!tipoSelecionado || !valorContato) return;
+    if (contatos.length >= 5) return;
+
+    const novoContato = {
+      tipo: tipoSelecionado,
+      valor: valorContato,
+    };
+
+    setContatos((prev) => [...prev, novoContato]);
+
+    setTipoSelecionado("");
+    setValorContato("");
+  }
+
+  function removerContato(index) {
+    const novaLista = contatos.filter((_, i) => i !== index);
+    setContatos(novaLista);
   }
 
   const redesocial = [
@@ -73,38 +92,14 @@ export default function AccCreate() {
     { label: "Facebook", value: "Facebook" },
   ];
 
-
   const estados = [
-    { sigla: "AC", nome: "Acre" },
-    { sigla: "AL", nome: "Alagoas" },
-    { sigla: "AP", nome: "Amapá" },
-    { sigla: "AM", nome: "Amazonas" },
-    { sigla: "BA", nome: "Bahia" },
-    { sigla: "CE", nome: "Ceará" },
-    { sigla: "DF", nome: "Distrito Federal" },
-    { sigla: "ES", nome: "Espírito Santo" },
-    { sigla: "GO", nome: "Goiás" },
-    { sigla: "MA", nome: "Maranhão" },
-    { sigla: "MT", nome: "Mato Grosso" },
-    { sigla: "MS", nome: "Mato Grosso do Sul" },
-    { sigla: "MG", nome: "Minas Gerais" },
-    { sigla: "PA", nome: "Pará" },
-    { sigla: "PB", nome: "Paraíba" },
-    { sigla: "PR", nome: "Paraná" },
-    { sigla: "PE", nome: "Pernambuco" },
-    { sigla: "PI", nome: "Piauí" },
-    { sigla: "RJ", nome: "Rio de Janeiro" },
-    { sigla: "RN", nome: "Rio Grande do Norte" },
-    { sigla: "RS", nome: "Rio Grande do Sul" },
-    { sigla: "RO", nome: "Rondônia" },
-    { sigla: "RR", nome: "Roraima" },
-    { sigla: "SC", nome: "Santa Catarina" },
     { sigla: "SP", nome: "São Paulo" },
-    { sigla: "SE", nome: "Sergipe" },
-    { sigla: "TO", nome: "Tocantins" },
+    { sigla: "RJ", nome: "Rio de Janeiro" },
+    { sigla: "MG", nome: "Minas Gerais" },
+    { sigla: "PR", nome: "Paraná" },
   ];
 
-  const [categoriasApi, setCategoriasApi] = useState<any[]>([]);
+  const [categoriasApi, setCategoriasApi] = useState([]);
 
   useEffect(() => {
     async function carregarCategorias() {
@@ -112,14 +107,13 @@ export default function AccCreate() {
         const response = await globalapi.get("categoria");
 
         const lista = response.data
-          .filter((c: any) => c.statusCategoria)
-          .map((c: any) => ({
+          .filter((c) => c.statusCategoria)
+          .map((c) => ({
             label: c.nome,
             value: c.id,
           }));
 
         setCategoriasApi(lista);
-
       } catch (error) {
         console.log(error);
       }
@@ -127,7 +121,6 @@ export default function AccCreate() {
 
     carregarCategorias();
   }, []);
-
 
   return (
     <View style={styles.screen}>
@@ -140,9 +133,7 @@ export default function AccCreate() {
         contentContainerStyle={styles.content}
       >
         <View>
-          <View
-            style={{ alignItems: "center", marginBottom: 20, marginTop: 10 }}
-          >
+          <View style={styles.photoContainer}>
             <ProfilePhoto size={120} />
           </View>
 
@@ -158,20 +149,33 @@ export default function AccCreate() {
             label="Descrição"
             icon="document-text-outline"
             placeholder="Digite aqui a descrição..."
-            multiline={true}
+            multiline
             value={descricao}
             onChangeText={setDescricao}
           />
 
+          {/* CEP */}
+          <Input
+            label="CEP"
+            icon="location-outline"
+            placeholder="Digite o CEP..."
+            value={cep}
+            onChangeText={handleCepChange}
+          />
+
+          {loadingCep && <Text>Buscando CEP...</Text>}
+          {erroCep && <Text style={{ color: "red" }}>{erroCep}</Text>}
+
+          {/* Estado + Município */}
           <View style={styles.rowInputs}>
             <SelectInput
-              label="Local"
+              label="Estado"
               icon="location-outline"
               selectedValue={estado}
               onValueChange={setEstado}
-              options={estados.map((estado) => ({
-                label: `${estado.sigla} - ${estado.nome}`,
-                value: estado.sigla,
+              options={estados.map((e) => ({
+                label: `${e.sigla} - ${e.nome}`,
+                value: e.sigla,
               }))}
               width={"31%"}
             />
@@ -181,58 +185,107 @@ export default function AccCreate() {
                 label=" "
                 placeholder="Município"
                 value={municipio}
-                onChangeText={handleMunicipioChange}
+                onChangeText={setMunicipio}
               />
-
-              {estado &&
-                municipio.length > 0 &&
-                municipiosFiltrados.length > 0 && (
-                  <View style={styles.sugestoes}>
-                    <ScrollView nestedScrollEnabled>
-                      {municipiosFiltrados.slice(0, 8).map((m) => (
-                        <TouchableOpacity
-                          key={m}
-                          onPress={() => selecionarMunicipio(m)}
-                          style={styles.sugestaoItem}
-                        >
-                          <Text style={styles.sugestaoTexto}>{m}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
             </View>
           </View>
 
           <Input
-            label="Região"
-            icon="compass-outline"
-            placeholder="Digite a região..."
-            value={regiao}
-            onChangeText={setRegiao}
+            label="Logradouro"
+            icon="home-outline"
+            placeholder="Rua, avenida..."
+            value={logradouro}
+            onChangeText={setLogradouro}
           />
 
-          <SelectInput
-            label="Contato"
-            icon="call-outline"
-            selectedValue={rede}
-            onValueChange={setRede}
-            options={redesocial}
+          <Input
+            label="Bairro"
+            icon="map-outline"
+            placeholder="Digite o bairro..."
+            value={bairro}
+            onChangeText={setBairro}
           />
 
-          <View style={styles.categoriaContainer}>
-            <SelectInput
-              label="Categoria"
-              icon="restaurant-outline"
-              selectedValue={categoria}
-              onValueChange={(value) => setCategoria(value)}
-              options={categoriasApi}
+          <View style={styles.rowInputs}>
+            <Input
+              label="Número"
+              placeholder="Nº"
+              value={numero}
+              onChangeText={setNumero}
+              width={"30%"}
             />
 
-
-
-
+            <Input
+              label="Complemento"
+              placeholder="Apto, casa..."
+              value={complemento}
+              onChangeText={setComplemento}
+              width={"65%"}
+            />
           </View>
+
+          {/* CONTATOS DINÂMICOS */}
+          <View style={styles.categoriaContainer}>
+            {contatos.length < 5 && (
+              <>
+                <SelectInput
+                  label="Adicionar contato"
+                  icon="call-outline"
+                  selectedValue={tipoSelecionado}
+                  onValueChange={setTipoSelecionado}
+                  options={redesocial}
+                />
+
+                {tipoSelecionado !== "" && (
+                  <View style={{ marginTop: 10 }}>
+                    <Input
+                      placeholder="Digite o contato..."
+                      value={valorContato}
+                      onChangeText={setValorContato}
+                    />
+
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      onPress={adicionarContato}
+                    >
+                      <Text style={styles.addButtonText}>Adicionar</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            )}
+
+            {contatos.length > 0 && (
+              <View style={{ marginTop: 15 }}>
+                {contatos.map((item, index) => (
+                  <View key={index} style={styles.contatoItem}>
+                    <View>
+                      <Text style={styles.contatoTipo}>{item.tipo}</Text>
+                      <Text style={styles.contatoValor}>{item.valor}</Text>
+                    </View>
+
+                    <TouchableOpacity onPress={() => removerContato(index)}>
+                      <Text style={styles.remover}>Remover</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {contatos.length >= 5 && (
+              <Text style={styles.limiteTexto}>
+                Limite de 5 contatos atingido
+              </Text>
+            )}
+          </View>
+
+          <SelectInput
+            label="Categoria"
+            icon="restaurant-outline"
+            selectedValue={categoria}
+            onValueChange={setCategoria}
+            options={categoriasApi}
+          />
 
           <ImageUpload
             label="Foto do evento"
@@ -240,7 +293,7 @@ export default function AccCreate() {
             height={200}
           />
 
-          <View style={{ marginTop: 30, alignItems: "center" }}>
+          <View style={styles.buttonContainer}>
             <Button onPress={() => router.push("/(tabs)")}>
               <Text style={typography.buttonText}>Concluir</Text>
             </Button>
@@ -255,52 +308,71 @@ export default function AccCreate() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
-
   container: { flex: 1 },
-
   content: { padding: 20, gap: 20 },
+
+  photoContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: 10,
+  },
 
   rowInputs: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
   },
 
   municipioContainer: {
     width: "65%",
-    position: "relative",
-  },
-
-  sugestoes: {
-    position: "absolute",
-    top: 55,
-    width: "100%",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    maxHeight: 200,
-    zIndex: 1000,
-
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-
-  sugestaoItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-
-  sugestaoTexto: {
-    fontSize: 14,
   },
 
   categoriaContainer: {
-    position: "relative",
     width: "100%",
+  },
+
+  addButton: {
+    backgroundColor: "#000",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 8,
+  },
+
+  addButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+
+  contatoItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+
+  contatoTipo: {
+    fontWeight: "bold",
+  },
+
+  contatoValor: {
+    color: "#555",
+  },
+
+  remover: {
+    color: "red",
+  },
+
+  limiteTexto: {
+    marginTop: 10,
+    color: "red",
+  },
+
+  buttonContainer: {
+    marginTop: 30,
+    alignItems: "center",
   },
 });
