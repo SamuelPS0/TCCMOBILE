@@ -5,9 +5,10 @@ import { typography } from "../globalstyles/fonts";
 
 interface IDateInputProps {
   label?: string;
-  value: Date;
+  value: Date | null; // ✔ aceita null
   onChange: (date: Date) => void;
   width?: number | string;
+  placeholder?: string; // ✔ novo
 }
 
 export const DateInput = ({
@@ -15,6 +16,7 @@ export const DateInput = ({
   value,
   onChange,
   width = "100%",
+  placeholder = "Selecione a data",
 }: IDateInputProps) => {
   const [showPicker, setShowPicker] = useState(false);
 
@@ -30,12 +32,14 @@ export const DateInput = ({
       {label && <Text style={typography.inputlabel}>{label}</Text>}
 
       <Pressable style={styles.input} onPress={() => setShowPicker(true)}>
-        <Text style={styles.text}>{value.toLocaleDateString("pt-BR")}</Text>
+        <Text style={[styles.text, { color: value ? "#000" : "#999" }]}>
+          {value ? value.toLocaleDateString("pt-BR") : placeholder}
+        </Text>
       </Pressable>
 
       {showPicker && (
         <DateTimePicker
-          value={value}
+          value={value || new Date()} // ✔ fallback só aqui
           mode="date"
           display="default"
           maximumDate={new Date()}

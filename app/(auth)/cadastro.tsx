@@ -33,18 +33,41 @@ export default function Cadastro() {
 
   const router = useRouter();
 
-function formatDate(date: Date) {
-  const pad = (n: number) => n.toString().padStart(2, "0");
+  function formatDate(date: Date) {
+    const pad = (n: number) => n.toString().padStart(2, "0");
 
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate()
-  )}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
-    date.getSeconds()
-  )}`;
-}
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+      date.getDate(),
+    )}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
+      date.getSeconds(),
+    )}`;
+  }
+
+  function maskDDD(value: string) {
+    return value.replace(/\D/g, "").slice(0, 2);
+  }
+
+  function maskTelefone(value: string) {
+    const numbers = value.replace(/\D/g, "").slice(0, 11);
+
+    return numbers
+      .replace(/^(\d{2})(\d)/, "($1)$2")
+      .replace(/(\d{5})(\d)/, "$1-$2");
+  }
+
+  function maskCPF(value: string) {
+    return value
+      .replace(/\D/g, "")
+      .slice(0, 11)
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  }
 
   const handleSubmit = async () => {
     if (loading) return;
+
+    const telefoneNumerico = telefone.replace(/\D/g, "");
 
     if (!nome.trim() || !email.trim() || !senha || !cpf.trim()) {
       alert("Preencha os campos obrigatórios");
@@ -66,7 +89,7 @@ function formatDate(date: Date) {
       return;
     }
 
-    if (telefone.length < 8) {
+    if (telefoneDDD.length !== 2 || telefoneNumerico.length < 8) {
       alert("Telefone inválido");
       return;
     }
@@ -81,22 +104,23 @@ function formatDate(date: Date) {
         nivelAcesso: "PRESTADOR",
         dataCadastro: formatDate(new Date()),
         statusUsuario: true,
+        telefone: `${telefoneDDD}${telefoneNumerico}`,
+        cpf: cpf.replace(/\D/g, ""),
+        dataNascimento: formatDate(birthDate),
       };
 
       const response = await globalapi.post("Usuario", payload);
 
       const userId = response?.data?.id;
 
-      if (!userId) {
-        throw new Error("ID do usuário não retornado");
-      }
-
       router.push({
         pathname: "/(auth)/seguranca",
-        params: { userId },
+        params: {
+          userId: String(userId),
+          cpf: cpf.replace(/\D/g, ""),
+        },
       });
-
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
 
       if (error.response?.status === 400) {
@@ -160,22 +184,27 @@ function formatDate(date: Date) {
 
           <View style={styles.rowInputs}>
             <Input
-              label="Telefone*"
+              label="DDD*"
               value={telefoneDDD}
-              onChangeText={setTelefoneDDD}
+              onChangeText={(text) => setTelefoneDDD(maskDDD(text))}
               width="21%"
               keyboardType="numeric"
             />
+
             <Input
-              label=" "
+              label="Telefone*"
               value={telefone}
-              onChangeText={setTelefone}
+              onChangeText={(text) => setTelefone(maskTelefone(text))}
               width="75%"
               keyboardType="numeric"
             />
           </View>
 
-          <Input label="CPF*" value={cpf} onChangeText={setCpf} />
+          <Input
+            label="CPF*"
+            value={cpf}
+            onChangeText={(text) => setCpf(maskCPF(text))}
+          />
 
           <Input
             label="Email*"
@@ -193,11 +222,12 @@ function formatDate(date: Date) {
 
           <View style={styles.rowInputs}>
             <DateInput
-  label="Data de nascimento*"
-  value={birthDate || new Date()}
-  onChange={(date: Date) => setBirthDate(date)}
-  width="48%"
-/>
+              label="Data de nascimento*"
+              value={birthDate}
+              onChange={(date: Date) => setBirthDate(date)}
+              width="48%"
+              placeholder="Selecione a data"
+            />
 
             <SelectInput
               label="Gênero"

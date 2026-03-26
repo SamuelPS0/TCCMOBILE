@@ -7,12 +7,29 @@ import {
   Text,
   View,
 } from "react-native";
+
 import { Header } from "../../assets/components/Header";
 import { typography } from "../../assets/globalstyles/fonts";
 import Bg from "../../assets/images/backgroundimage.png";
+import { useAuth } from "../../src/context/AuthContext";
 
 export default function Landing() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  function handleCreateProfile() {
+    if (!user) {
+      console.log("Usuário não autenticado");
+      return;
+    }
+
+    router.push({
+      pathname: "/(telas)/accCreate",
+      params: {
+        userId: String(user.id),
+      },
+    });
+  }
 
   return (
     <View style={styles.container}>
@@ -20,7 +37,8 @@ export default function Landing() {
         <Header style={styles.headerarea}>
           <Text style={typography.title}>Home</Text>
         </Header>
-        <Pressable onPress={() => router.push("/(telas)/accCreate")}>
+
+        <Pressable onPress={handleCreateProfile}>
           <View style={styles.card}>
             <Ionicons name="add-outline" size={48} color="#000000" />
             <Text style={typography.alata}>Criar card</Text>
@@ -30,6 +48,7 @@ export default function Landing() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
