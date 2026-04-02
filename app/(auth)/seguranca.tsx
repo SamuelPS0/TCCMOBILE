@@ -9,6 +9,7 @@ import { Header } from "../../assets/components/Header";
 import { Input } from "../../assets/components/Input";
 import { typography } from "../../assets/globalstyles/fonts";
 import { useAuth } from "../../src/context/AuthContext";
+import { savePendingPrestadorProfile } from "../../src/storage/onboardingStorage";
 
 export default function Seguranca() {
   const router = useRouter();
@@ -26,6 +27,18 @@ export default function Seguranca() {
       return;
     }
 
+    const userId = String(params.userId ?? "");
+    const cpf = String(params.cpf ?? "");
+    const nome = String(params.nome ?? "Usuário");
+    const email = String(params.email ?? "");
+
+    await savePendingPrestadorProfile({
+      userId,
+      cpf,
+      nome,
+      email,
+    });
+
     if (!acceptTerms1 || !acceptTerms2) {
       Alert.alert("Atenção", "Você precisa aceitar os termos para continuar.");
       return;
@@ -33,9 +46,10 @@ export default function Seguranca() {
 
     // login simples após cadastro
     const userData = {
-      id: params.userId ?? null,
-      nome: "Usuário",
-      email: "",
+      id: userId || null,
+      nome,
+      email,
+      cpf,
       nivelAcesso: "PRESTADOR",
       statusUsuario: true,
     };

@@ -17,12 +17,18 @@ import { Input } from "../../assets/components/Input";
 import { ProfilePhoto } from "../../assets/components/ProfilePhoto";
 import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
+import {
+  clearPendingPrestadorProfile,
+  getPendingPrestadorProfile,
+} from "../../src/storage/onboardingStorage";
 
 export default function AccCreate() {
   const router = useRouter();
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
+
+  const [cpfPersistido, setCpfPersistido] = useState("");
 
   const [estado, setEstado] = useState("");
   const [municipio, setMunicipio] = useState("");
@@ -86,6 +92,77 @@ export default function AccCreate() {
     setContatos(novaLista);
   }
 
+  function validarFormulario() {
+    if (!userId) return "Usuário não autenticado";
+    if (!cpf) return "CPF não informado";
+    const cpfFinal = String(cpf || cpfPersistido || "").replace(/\D/g, "");
+    if (!cpfFinal) return "CPF não informado";
+    if (!nome) return "Nome obrigatório";
+    if (!categoria) return "Categoria obrigatória";
+    return null;
+  }
+
+  async function handleSubmit() {
+    const erro = validarFormulario();
+    if (erro) return;
+    if (erro) {
+      alert(erro);
+      return;
+    }
+
+    const cpfFinal = String(cpf || cpfPersistido || "").replace(/\D/g, "");
+
+    const formData = new FormData();
+
+    formData.append("usuarioId", String(userId));
+    formData.append("cpf", cpf);
+    formData.append("cpf", cpfFinal);
+
+    formData.append("nome", nome);
+    formData.append("descricao", descricao);
+
+    formData.append("categoria", categoria);
+
+    formData.append("cep", cep.replace(/\D/g, ""));
+    formData.append("cidade", municipio);
+    formData.append("uf", estado);
+
+    formData.append("logradouro", logradouro);
+    formData.append("bairro", bairro);
+    formData.append("numero", numero);
+    formData.append("complemento", complemento);
+
+    formData.append("contatos", JSON.stringify(contatos));
+
+    if (profileImage) {
+      formData.append("profileImage", {
+        uri: profileImage,
+        type: "image/jpeg",
+        name: "profile.jpg",
+      });
+    }
+
+    if (eventImage) {
+      formData.append("eventImage", {
+        uri: eventImage,
+        type: "image/jpeg",
+        name: "event.jpg",
+      });
+    }
+
+    try {
+      await globalapi.post("prestador", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      await clearPendingPrestadorProfile();
+      router.push("/(tabs)");
+    } catch (error) {
+      console.log(error?.response?.data || error);
+      alert("Não foi possível criar o perfil de prestador.");
+    }
+  }
+
   const redesocial = [
     { label: "Whatsapp", value: "Whatsapp" },
     { label: "Instagram", value: "Instagram" },
@@ -121,6 +198,21 @@ export default function AccCreate() {
 
     carregarCategorias();
   }, []);
+
+  useEffect(() => {
+    async function carregarCpfPendente() {
+      if (cpf) return;
+
+      const pendingProfile = await getPendingPrestadorProfile();
+      const sameUser = pendingProfile?.userId === String(userId);
+
+      if (sameUser && pendingProfile?.cpf) {
+        setCpfPersistido(String(pendingProfile.cpf));
+      }
+    }
+
+    carregarCpfPendente();
+  }, [cpf, userId]);
 
   return (
     <View style={styles.screen}>

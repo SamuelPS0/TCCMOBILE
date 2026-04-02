@@ -10,9 +10,32 @@ import {
 import { Header } from "../../assets/components/Header";
 import { typography } from "../../assets/globalstyles/fonts";
 import Bg from "../../assets/images/backgroundimage.png";
+import { useAuth } from "../../src/context/AuthContext";
+import { getPendingPrestadorProfile } from "../../src/storage/onboardingStorage";
 
 export default function Landing() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  async function handleCreateProfile() {
+    if (!user) {
+      console.log("Usuário não autenticado");
+      return;
+    }
+
+    const pendingProfile = await getPendingPrestadorProfile();
+    const cpf =
+      user.cpf ||
+      (pendingProfile?.userId === String(user.id) ? pendingProfile?.cpf : "");
+
+    router.push({
+      pathname: "/(telas)/accCreate",
+      params: {
+        userId: String(user.id),
+        cpf: cpf || "",
+      },
+    });
+  }
 
   return (
     <View style={styles.container}>

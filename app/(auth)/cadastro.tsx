@@ -18,6 +18,7 @@ import { Header } from "../../assets/components/Header";
 import { Input } from "../../assets/components/Input";
 import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
+import { savePendingPrestadorProfile } from "../../src/storage/onboardingStorage";
 
 export default function Cadastro() {
   const [nome, setNome] = useState("");
@@ -86,14 +87,27 @@ function formatDate(date: Date) {
       const response = await globalapi.post("Usuario", payload);
 
       const userId = response?.data?.id;
+            const cpfLimpo = cpf.replace(/\D/g, "");
+
+      await savePendingPrestadorProfile({
+        userId: String(userId),
+        cpf: cpfLimpo,
+        nome: nome.trim(),
+        email: email.trim().toLowerCase(),
+      })
+      
 
       if (!userId) {
         throw new Error("ID do usuário não retornado");
       }
 
       router.push({
-        pathname: "/(auth)/seguranca",
-        params: { userId },
+                pathname: "/(auth)/seguranca",
+        params: {
+          userId: String(userId),
+          cpf: cpfLimpo,
+          nome: nome.trim(),
+          email: email.trim().toLowerCase(),
       });
 
     } catch (error) {
