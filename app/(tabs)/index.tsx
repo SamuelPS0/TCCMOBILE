@@ -7,32 +7,46 @@ import {
   Text,
   View,
 } from "react-native";
+
 import { Header } from "../../assets/components/Header";
 import { typography } from "../../assets/globalstyles/fonts";
 import Bg from "../../assets/images/backgroundimage.png";
 import { useAuth } from "../../src/context/AuthContext";
+<<<<<<< HEAD
 import { getPendingPrestadorProfile } from "../../src/storage/onboardingStorage";
+=======
+>>>>>>> e539872adacedee792487ceba141c530361d4f77
 
 export default function Landing() {
   const router = useRouter();
   const { user } = useAuth();
 
+<<<<<<< HEAD
   async function handleCreateProfile() {
+=======
+  function handleCreateProfile() {
+>>>>>>> e539872adacedee792487ceba141c530361d4f77
     if (!user) {
       console.log("Usuário não autenticado");
       return;
     }
 
+<<<<<<< HEAD
     const pendingProfile = await getPendingPrestadorProfile();
     const cpf =
       user.cpf ||
       (pendingProfile?.userId === String(user.id) ? pendingProfile?.cpf : "");
 
+=======
+>>>>>>> e539872adacedee792487ceba141c530361d4f77
     router.push({
       pathname: "/(telas)/accCreate",
       params: {
         userId: String(user.id),
+<<<<<<< HEAD
         cpf: cpf || "",
+=======
+>>>>>>> e539872adacedee792487ceba141c530361d4f77
       },
     });
   }
@@ -43,7 +57,8 @@ export default function Landing() {
         <Header style={styles.headerarea}>
           <Text style={typography.title}>Home</Text>
         </Header>
-        <Pressable onPress={() => router.push("/(telas)/accCreate")}>
+
+        <Pressable onPress={handleCreateProfile}>
           <View style={styles.card}>
             <Ionicons name="add-outline" size={48} color="#000000" />
             <Text style={typography.alata}>Criar card</Text>
@@ -53,6 +68,7 @@ export default function Landing() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
