@@ -23,6 +23,7 @@ export const loginRequest = async (email, senha) => {
   return {
     id: usuarioEncontrado.id,
     nome: usuarioEncontrado.nome,
+    cpf: usuarioEncontrado.cpf,
     email: usuarioEncontrado.email,
     nivelAcesso: usuarioEncontrado.nivelAcesso,
     statusUsuario: usuarioEncontrado.statusUsuario,
