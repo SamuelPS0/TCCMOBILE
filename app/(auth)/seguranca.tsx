@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { globalapi } from "../../assets/api/globalapi";
 import { Button } from "../../assets/components/Button";
 import { CheckboxInput } from "../../assets/components/CheckboxInput";
 import { Header } from "../../assets/components/Header";
@@ -20,42 +21,92 @@ export default function Seguranca() {
   const [chave2, setChave2] = useState("");
   const [acceptTerms1, setAcceptTerms1] = useState(false);
   const [acceptTerms2, setAcceptTerms2] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleContinue = async () => {
+    if (loading) return;
+
     if (!chave1.trim() || !chave2.trim()) {
       Alert.alert("Atenção", "Preencha as perguntas de segurança.");
       return;
     }
-
-    const userId = String(params.userId ?? "");
-    const cpf = String(params.cpf ?? "");
-    const nome = String(params.nome ?? "Usuário");
-    const email = String(params.email ?? "");
-
-    await savePendingPrestadorProfile({
-      userId,
-      cpf,
-      nome,
-      email,
-    });
 
     if (!acceptTerms1 || !acceptTerms2) {
       Alert.alert("Atenção", "Você precisa aceitar os termos para continuar.");
       return;
     }
 
-    // login simples após cadastro
-    const userData = {
-      id: userId || null,
-      nome,
-      email,
-      cpf,
-      nivelAcesso: "PRESTADOR",
-      statusUsuario: true,
-    };
+    try {
+      setLoading(true);
 
-    await login(userData);
-    router.replace("/(tabs)");
+      // ===== DADOS VINDOS DO CADASTRO =====
+      const nome = String(params.nome ?? "");
+      const email = String(params.email ?? "");
+      const senha = String(params.senha ?? "");
+      const cpf = String(params.cpf ?? "");
+      const telefone = String(params.telefone ?? "");
+      const birthDate = String(params.birthDate ?? "");
+
+      // ===== PAYLOAD COMPLETO =====
+      const payload = {
+        nome,
+        email,
+        senha,
+        cpf,
+        telefone,
+        dataNascimento: birthDate,
+        nivelAcesso: "PRESTADOR",
+        statusUsuario: true,
+        ps_01: chave1,
+        ps_02: chave2,
+      };
+
+      console.log("Payload enviado:", payload);
+
+      const response = await globalapi.post("Usuario", payload);
+
+      const userId = response?.data?.id;
+
+      if (!userId) {
+        throw new Error("ID do usuário não retornado");
+      }
+
+      // ===== SALVA LOCAL =====
+      await savePendingPrestadorProfile({
+        userId: String(userId),
+        cpf,
+        nome,
+        email,
+      });
+
+      // ===== LOGIN =====
+      const userData = {
+        id: userId,
+        nome,
+        email,
+        cpf,
+        nivelAcesso: "PRESTADOR",
+        statusUsuario: true,
+      };
+
+      await login(userData);
+
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      console.log("Erro completo:", error);
+      console.log("Response:", error?.response);
+      console.log("Data:", error?.response?.data);
+
+      if (error.response?.status === 400) {
+        Alert.alert("Erro", "Dados inválidos.");
+      } else if (error.response?.status === 409) {
+        Alert.alert("Erro", "Email já está em uso.");
+      } else {
+        Alert.alert("Erro", "Erro ao finalizar cadastro.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -129,7 +180,9 @@ export default function Seguranca() {
 
       <View style={styles.boxbottom}>
         <Button onPress={handleContinue}>
-          <Text style={typography.buttonText}>Continuar</Text>
+          <Text style={typography.buttonText}>
+            {loading ? "Carregando..." : "Continuar"}
+          </Text>
         </Button>
       </View>
     </View>

@@ -10,15 +10,30 @@ import {
   View,
 } from "react-native";
 
-import { globalapi } from "../../assets/api/globalapi";
-
 import { Button } from "../../assets/components/Button";
 import { DateInput } from "../../assets/components/DateInput";
 import { Header } from "../../assets/components/Header";
 import { Input } from "../../assets/components/Input";
 import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
-import { savePendingPrestadorProfile } from "../../src/storage/onboardingStorage";
+
+// ================== MÁSCARAS ==================
+function maskCPF(value: string) {
+  return value
+    .replace(/\D/g, "")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+    .slice(0, 14);
+}
+
+function maskPhone(value: string) {
+  return value
+    .replace(/\D/g, "")
+    .replace(/^(\d{2})(\d)/g, "($1) $2")
+    .replace(/(\d{5})(\d{1,4})$/, "$1-$2")
+    .slice(0, 15);
+}
 
 export default function Cadastro() {
   const [nome, setNome] = useState("");
@@ -34,95 +49,55 @@ export default function Cadastro() {
 
   const router = useRouter();
 
-function formatDate(date: Date) {
-  const pad = (n: number) => n.toString().padStart(2, "0");
+  function formatDate(date: Date) {
+    const pad = (n: number) => n.toString().padStart(2, "0");
 
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate()
-  )}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
-    date.getSeconds()
-  )}`;
-}
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+      date.getDate(),
+    )}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
+      date.getSeconds(),
+    )}`;
+  }
 
   const handleSubmit = async () => {
     if (loading) return;
 
-    if (!nome.trim() || !email.trim() || !senha || !cpf.trim()) {
-      alert("Preencha os campos obrigatórios");
+    const errors: string[] = [];
+
+    if (!nome.trim()) errors.push("Nome é obrigatório");
+    if (!email.trim()) errors.push("Email é obrigatório");
+    if (!email.includes("@")) errors.push("Email deve conter '@'");
+    if (!senha) errors.push("Senha é obrigatória");
+    if (senha.length < 6) errors.push("Senha deve ter no mínimo 6 caracteres");
+    if (!cpf.trim()) errors.push("CPF é obrigatório");
+    if (cpf.replace(/\D/g, "").length !== 11) errors.push("CPF inválido");
+    if (!telefone || telefone.replace(/\D/g, "").length < 8)
+      errors.push("Telefone inválido");
+    if (!birthDate) errors.push("Data de nascimento obrigatória");
+
+    if (errors.length > 0) {
+      console.log("Erros:", errors);
+      alert(errors.join("\n"));
       return;
     }
 
-    if (!birthDate) {
-      alert("Informe a data de nascimento");
-      return;
-    }
+    const cpfLimpo = cpf.replace(/\D/g, "");
+    const telefoneCompleto =
+      telefoneDDD.replace(/\D/g, "") + telefone.replace(/\D/g, "");
 
-    if (senha.length < 6) {
-      alert("Senha deve ter no mínimo 6 caracteres");
-      return;
-    }
-
-    if (!email.includes("@")) {
-      alert("Email inválido");
-      return;
-    }
-
-    if (telefone.length < 8) {
-      alert("Telefone inválido");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const payload = {
+    router.push({
+      pathname: "/(auth)/seguranca",
+      params: {
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
-        senha: senha,
-        nivelAcesso: "PRESTADOR",
-        dataCadastro: formatDate(new Date()),
-        statusUsuario: true,
-      };
-
-      const response = await globalapi.post("Usuario", payload);
-
-      const userId = response?.data?.id;
-            const cpfLimpo = cpf.replace(/\D/g, "");
-
-      await savePendingPrestadorProfile({
-        userId: String(userId),
+        senha,
         cpf: cpfLimpo,
-        nome: nome.trim(),
-        email: email.trim().toLowerCase(),
-      })
-      
-
-      if (!userId) {
-        throw new Error("ID do usuário não retornado");
-      }
-
-      router.push({
-                pathname: "/(auth)/seguranca",
-        params: {
-          userId: String(userId),
-          cpf: cpfLimpo,
-          nome: nome.trim(),
-          email: email.trim().toLowerCase(),
-      });
-
-    } catch (error) {
-      console.log(error);
-
-      if (error.response?.status === 400) {
-        alert("Dados inválidos ou email já cadastrado");
-      } else if (error.response?.status === 409) {
-        alert("Email já está em uso");
-      } else {
-        alert("Erro ao criar conta. Tente novamente.");
-      }
-    } finally {
-      setLoading(false);
-    }
+        telefone: telefoneCompleto,
+        gender,
+        estado,
+        birthDate: formatDate(birthDate!),
+      },
+    });
   };
 
   const estados = [
@@ -165,31 +140,32 @@ function formatDate(date: Date) {
         <Ionicons name="arrow-back-outline" size={24} color="black" />
       </Pressable>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.inputContainer}>
           <Input label="Nome*" value={nome} onChangeText={setNome} />
 
           <View style={styles.rowInputs}>
             <Input
-              label="Telefone*"
+              label="DDD"
               value={telefoneDDD}
-              onChangeText={setTelefoneDDD}
+              onChangeText={(text) => setTelefoneDDD(text.replace(/\D/g, ""))}
               width="21%"
               keyboardType="numeric"
             />
             <Input
-              label=" "
+              label="Telefone*"
               value={telefone}
-              onChangeText={setTelefone}
+              onChangeText={(text) => setTelefone(maskPhone(text))}
               width="75%"
               keyboardType="numeric"
             />
           </View>
 
-          <Input label="CPF*" value={cpf} onChangeText={setCpf} />
+          <Input
+            label="CPF*"
+            value={cpf}
+            onChangeText={(text) => setCpf(maskCPF(text))}
+          />
 
           <Input
             label="Email*"
@@ -207,11 +183,11 @@ function formatDate(date: Date) {
 
           <View style={styles.rowInputs}>
             <DateInput
-  label="Data de nascimento*"
-  value={birthDate || new Date()}
-  onChange={(date: Date) => setBirthDate(date)}
-  width="48%"
-/>
+              label="Data de nascimento*"
+              value={birthDate || new Date()}
+              onChange={(date: Date) => setBirthDate(date)}
+              width="48%"
+            />
 
             <SelectInput
               label="Gênero"
