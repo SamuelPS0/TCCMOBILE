@@ -43,7 +43,7 @@ export default function Landing() {
         <Header style={styles.headerarea}>
           <Text style={typography.title}>Home</Text>
         </Header>
-        <Pressable onPress={() => router.push("/(telas)/accCreate")}>
+        <Pressable onPress={handleCreateProfile}>
           <View style={styles.card}>
             <Ionicons name="add-outline" size={48} color="#000000" />
             <Text style={typography.alata}>Criar card</Text>

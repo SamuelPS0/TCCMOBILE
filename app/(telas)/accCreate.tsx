@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ScrollView,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { buscarCep } from "../../assets/api/apiviacep";
 import { globalapi } from "../../assets/api/globalapi";
 import BottomNav from "../../assets/components/BottomNav";
@@ -17,6 +18,7 @@ import { Input } from "../../assets/components/Input";
 import { ProfilePhoto } from "../../assets/components/ProfilePhoto";
 import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
+import { useAuth } from "../../src/context/AuthContext";
 import {
   clearPendingPrestadorProfile,
   getPendingPrestadorProfile,
@@ -24,12 +26,14 @@ import {
 
 export default function AccCreate() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const { user } = useAuth();
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
 
-  const [cpfPersistido, setCpfPersistido] = useState("");
   const [cpf, setCpf] = useState("");
+  const [cpfPersistido, setCpfPersistido] = useState("");
   const [userId, setUserId] = useState("");
 
   const [estado, setEstado] = useState("");
@@ -42,27 +46,22 @@ export default function AccCreate() {
   const [complemento, setComplemento] = useState("");
   const [bairro, setBairro] = useState("");
 
-  const [loadingCep, setLoadingCep] = useState(false);
-  const [erroCep, setErroCep] = useState("");
-
-  const [loading, setLoading] = useState(false);
-
-  const [contatos, setContatos] = useState([]);
+  const [contatos, setContatos] = useState<any[]>([]);
   const [tipoSelecionado, setTipoSelecionado] = useState("");
   const [valorContato, setValorContato] = useState("");
 
-  const [profileImage, setProfileImage] = useState<{
-    uri: string;
-    base64: string | null;
-  } | null>(null);
-  const [eventImage, setEventImage] = useState<{
-    uri: string;
-    base64: string | null;
-  } | null>(null);
+  const [profileImage, setProfileImage] = useState<any>(null);
+  const [eventImage, setEventImage] = useState<any>(null);
 
-  const [categoriasApi, setCategoriasApi] = useState([]);
+  const [categoriasApi, setCategoriasApi] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [erroCep, setErroCep] = useState("");
 
-  async function handleCepChange(text) {
+  // =========================
+  // CEP
+  // =========================
+  async function handleCepChange(text: string) {
     const cepLimpo = text.replace(/\D/g, "");
     setCep(cepLimpo);
 
@@ -79,12 +78,15 @@ export default function AccCreate() {
       setLogradouro(data.logradouro || "");
       setBairro(data.bairro || "");
     } catch {
-      setErroCep("CEP inválido ou não encontrado");
+      setErroCep("CEP inválido");
     } finally {
       setLoadingCep(false);
     }
   }
 
+  // =========================
+  // CONTATOS
+  // =========================
   function adicionarContato() {
     if (!tipoSelecionado || !valorContato) return;
     if (contatos.length >= 5) return;
@@ -93,143 +95,134 @@ export default function AccCreate() {
       ...prev,
       { tipo: tipoSelecionado, valor: valorContato },
     ]);
-
     setTipoSelecionado("");
     setValorContato("");
   }
 
-  function removerContato(index) {
+  function removerContato(index: number) {
     setContatos((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function validarFormulario() {
-    if (!userId) return "Usuário não autenticado";
-
-    const cpfFinal = String(cpf || cpfPersistido || "").replace(/\D/g, "");
-    if (!cpfFinal) return "CPF não informado";
-
+  // =========================
+  // VALIDACAO
+  // =========================
+  function validar() {
+    const uid = Number(userId);
+    if (!uid) return "User inválido";
     if (!nome) return "Nome obrigatório";
     if (!categoria) return "Categoria obrigatória";
 
     return null;
   }
 
+  // =========================
+  // SUBMIT (BASE64 ONLY)
+  // =========================
   const handleSubmit = async () => {
-    const erro = validarFormulario();
+    const erro = validar();
+    if (erro) return alert(erro);
 
-    if (erro) {
-      alert(erro);
-      return;
-    }
-
-    const cpfFinal = String(cpf || cpfPersistido || "").replace(/\D/g, "");
+    const cpfFinal = (cpf || cpfPersistido || "").replace(/\D/g, "");
 
     try {
       setLoading(true);
 
-      // =========================
-      // 1. CRIAR PRESTADOR
-      // =========================
+      console.log("=== SUBMIT START ===");
+
       const prestadorPayload = {
-        usuario_id: Number(userId),
+        usuario: { id: Number(userId) },
         nome,
         cpf: cpfFinal,
-        genero: "Não informado", // ou usar seu state
-        telefone: contatos[0]?.valor || "",
-
+        genero: "Não informado",
+        telefone: contatos?.[0]?.valor || "",
         logradouro,
         numeroResidencial: numero,
         complemento,
-
         cep,
         bairro,
         cidade: municipio,
         uf: estado,
-
         statusPrestador: "ATIVO",
       };
 
-      console.log("PRESTADOR PAYLOAD:", prestadorPayload);
+      console.log("PRESTADOR:", prestadorPayload);
 
       const prestadorRes = await globalapi.post("prestador", prestadorPayload);
+      const prestadorId = prestadorRes.data?.id;
 
-      const prestadorId = prestadorRes?.data?.id;
+      if (!prestadorId) throw new Error("Prestador não retornado");
 
-      if (!prestadorId) {
-        throw new Error("PrestadorId não retornado");
-      }
-
-      // =========================
-      // 2. CRIAR SERVIÇO
-      // =========================
       const servicoPayload = {
-        nome: nome, // ou outro campo
+        nome,
         descricao,
-
         statusServico: true,
-
-        prestador_id: prestadorId,
-        categoria_id: Number(categoria),
-
+        prestadorId,
+        categoriaId: Number(categoria),
         foto: eventImage?.base64 || null,
       };
 
-      console.log("SERVICO PAYLOAD:", servicoPayload);
+      console.log("SERVICO:", {
+        ...servicoPayload,
+        foto: servicoPayload.foto ? "[BASE64 OK]" : null,
+      });
 
       await globalapi.post("servico", servicoPayload);
 
       await clearPendingPrestadorProfile();
 
+      console.log("=== SUCCESS ===");
+
       alert("Perfil criado com sucesso!");
       router.replace("/(tabs)");
-    } catch (error) {
-      console.log("ERRO COMPLETO:", error);
-      console.log("RESPONSE:", error?.response);
-      console.log("DATA:", error?.response?.data);
+    } catch (error: any) {
+      console.log("=== ERROR ===");
+      console.log(error?.response?.data || error.message);
 
-      alert(
-        error?.response?.data?.message ||
-          JSON.stringify(error?.response?.data) ||
-          "Erro ao criar perfil",
-      );
+      alert(error?.response?.data?.message || "Erro ao criar perfil");
     } finally {
       setLoading(false);
     }
   };
 
+  // =========================
+  // LOAD USER
+  // =========================
   useEffect(() => {
-    async function carregarDados() {
+    async function load() {
       const pending = await getPendingPrestadorProfile();
 
-      if (pending) {
-        setUserId(pending.userId || "");
-        setCpf(pending.cpf || "");
-        setCpfPersistido(pending.cpf || "");
-      }
+      const resolvedUserId = String(
+        params.userId ?? pending?.userId ?? user?.id ?? "",
+      );
+
+      const resolvedCpf = String(params.cpf ?? pending?.cpf ?? user?.cpf ?? "");
+
+      setUserId(resolvedUserId);
+      setCpf(resolvedCpf);
+      setCpfPersistido(resolvedCpf);
     }
 
-    carregarDados();
+    load();
   }, []);
 
+  // =========================
+  // LOAD CATEGORIAS
+  // =========================
   useEffect(() => {
-    async function carregarCategorias() {
-      try {
-        const response = await globalapi.get("categoria");
+    async function loadCategorias() {
+      const res = await globalapi.get("categoria");
 
-        const lista = response.data
-          .filter((c) => c.statusCategoria)
-          .map((c) => ({
-            label: c.nome,
-            value: c.id,
-          }));
+      const lista = res.data
+        .filter((c: any) => c.statusCategoria)
+        .map((c: any) => ({
+          label: c.nome,
+          value: c.id,
+        }));
 
-        setCategoriasApi(lista);
-      } catch (error) {
-        console.log(error);
-      }
+      setCategoriasApi(lista);
     }
 
-    carregarCategorias();
+    loadCategorias();
   }, []);
 
   return (
