@@ -19,6 +19,7 @@ import { ProfilePhoto } from "../../assets/components/ProfilePhoto";
 import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
 import { useAuth } from "../../src/context/AuthContext";
+import { updateUsuarioFoto } from "../../src/services/prestadorService";
 import {
   clearPendingPrestadorProfile,
   getPendingPrestadorProfile,
@@ -61,28 +62,38 @@ export default function AccCreate() {
   // =========================
   // CEP
   // =========================
-  async function handleCepChange(text: string) {
-    const cepLimpo = text.replace(/\D/g, "");
-    setCep(cepLimpo);
+function formatCep(value: string) {
+  const cep = value.replace(/\D/g, "");
+  return cep.replace(/^(\d{5})(\d)/, "$1-$2");
+}
 
-    if (cepLimpo.length !== 8) return;
+async function handleCepChange(text: string) {
+  const cepLimpo = text.replace(/\D/g, "");
+  setCep(cepLimpo);
 
-    try {
-      setLoadingCep(true);
-      setErroCep("");
+  if (cepLimpo.length !== 8) return;
 
-      const data = await buscarCep(cepLimpo);
+  try {
+    setLoadingCep(true);
+    setErroCep("");
 
-      setEstado(data.uf || "");
-      setMunicipio(data.localidade || "");
-      setLogradouro(data.logradouro || "");
-      setBairro(data.bairro || "");
-    } catch {
+    const data = await buscarCep(cepLimpo);
+
+    if (data.erro) {
       setErroCep("CEP inválido");
-    } finally {
-      setLoadingCep(false);
+      return;
     }
+
+    setEstado(data.uf || "");
+    setMunicipio(data.localidade || "");
+    setLogradouro(data.logradouro || "");
+    setBairro(data.bairro || "");
+  } catch (e) {
+    setErroCep("Erro ao buscar CEP");
+  } finally {
+    setLoadingCep(false);
   }
+}
 
   // =========================
   // CONTATOS
@@ -128,6 +139,19 @@ export default function AccCreate() {
       setLoading(true);
 
       console.log("=== SUBMIT START ===");
+      const profilePhotoBase64 = profileImage?.base64 || null;
+      const normalizedProfilePhotoBase64 =
+        typeof profilePhotoBase64 === "string" &&
+        profilePhotoBase64.startsWith("data:")
+          ? profilePhotoBase64.split(",")[1] || profilePhotoBase64
+          : profilePhotoBase64;
+
+      if (normalizedProfilePhotoBase64) {
+        await updateUsuarioFoto(
+  Number(userId),
+  normalizedProfilePhotoBase64
+);
+      }
 
       const prestadorPayload = {
         usuario: { id: Number(userId) },
@@ -253,7 +277,11 @@ export default function AccCreate() {
             onChangeText={setDescricao}
           />
 
-          <Input label="CEP" value={cep} onChangeText={handleCepChange} />
+          <Input
+  label="CEP"
+  value={formatCep(cep)}
+  onChangeText={handleCepChange}
+/>
 
           {loadingCep && <Text>Buscando CEP...</Text>}
           {erroCep && <Text style={{ color: "red" }}>{erroCep}</Text>}

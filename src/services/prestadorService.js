@@ -28,9 +28,14 @@ export const getServicosByPrestador = async (prestadorId) => {
 };
 
 export const updateUsuarioFoto = async (userId, fotoBase64) => {
-  const response = await globalapi.put(`/Usuario/${userId}`, {
-    foto: fotoBase64,
-  });
+  const fotoNormalizada =
+    typeof fotoBase64 === "string" && fotoBase64.startsWith("data:")
+      ? fotoBase64.split(",")[1] || fotoBase64
+      : fotoBase64;
+
+  const payload = { foto: fotoNormalizada };
+
+  const response = await globalapi.put(`/Usuario/${userId}/foto`, payload);
 
   return response.data;
 };
