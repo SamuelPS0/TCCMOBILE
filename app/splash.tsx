@@ -12,7 +12,7 @@ export default function Splash() {
     }, 2500); // 2.5 segundos
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [router]);
 
   return (
     <View style={styles.container}>

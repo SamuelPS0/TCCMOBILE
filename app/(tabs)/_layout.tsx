@@ -6,6 +6,31 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 
+function AnimatedTabIcon({
+  focused,
+  color,
+  name,
+}: {
+  focused: boolean;
+  color: string;
+  name: keyof typeof Ionicons.glyphMap;
+}) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        scale: withSpring(focused ? 1.25 : 1),
+      },
+    ],
+  }));
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Ionicons name={name} size={26} color={color} />
+    </Animated.View>
+  );
+}
+
+
 export default function TabLayout() {
   return (
     <Tabs
@@ -43,23 +68,9 @@ export default function TabLayout() {
             </Text>
           ),
 
-          tabBarIcon: ({ color, focused }) => {
-            const animatedStyle = useAnimatedStyle(() => ({
-              transform: [
-                {
-                  scale: withSpring(focused ? 1.25 : 1),
-                },
-              ],
-            }));
-
-            return (
-              <Animated.View style={animatedStyle}>
-                <Ionicons name="home" size={26} color={color} />
-              </Animated.View>
-            );
-          },
-        }}
-      />
+tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon focused={focused} color={color} name="home" />
+          ),}} />
 
       <Tabs.Screen
         name="perfil"
@@ -76,25 +87,13 @@ export default function TabLayout() {
             </Text>
           ),
 
-            tabBarIcon: ({ color, focused }) => {
-              const animatedStyle = useAnimatedStyle(() => ({
-                transform: [
-                  {
-                    scale: withSpring(focused ? 1.25 : 1),
-                  },
-                ],
-              }));
-
-              return (
-                <Animated.View style={animatedStyle}>
-                  <Ionicons
-                    name="person-circle-outline"
-                    size={26}
-                    color={color}
-                  />
-                </Animated.View>
-              );
-            },
+            tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon
+              focused={focused}
+              color={color}
+              name="person-circle-outline"
+            />
+          ),
         }}
       />
     </Tabs>

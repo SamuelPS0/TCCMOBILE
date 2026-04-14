@@ -88,7 +88,7 @@ async function handleCepChange(text: string) {
     setMunicipio(data.localidade || "");
     setLogradouro(data.logradouro || "");
     setBairro(data.bairro || "");
-  } catch (e) {
+  } catch {
     setErroCep("Erro ao buscar CEP");
   } finally {
     setLoadingCep(false);
@@ -211,15 +211,19 @@ async function handleCepChange(text: string) {
   // =========================
   // LOAD USER
   // =========================
+
+    const paramUserId = params.userId;
+  const paramCpf = params.cpf;
+
   useEffect(() => {
     async function load() {
       const pending = await getPendingPrestadorProfile();
 
       const resolvedUserId = String(
-        params.userId ?? pending?.userId ?? user?.id ?? "",
+         paramUserId ?? pending?.userId ?? user?.id ?? "",
       );
 
-      const resolvedCpf = String(params.cpf ?? pending?.cpf ?? user?.cpf ?? "");
+       const resolvedCpf = String(paramCpf ?? pending?.cpf ?? user?.cpf ?? "");
 
       setUserId(resolvedUserId);
       setCpf(resolvedCpf);
@@ -227,7 +231,7 @@ async function handleCepChange(text: string) {
     }
 
     load();
-  }, []);
+  }, [paramCpf, paramUserId, user?.cpf, user?.id]);
 
   // =========================
   // LOAD CATEGORIAS

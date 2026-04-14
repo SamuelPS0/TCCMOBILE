@@ -2,7 +2,6 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -45,7 +44,6 @@ export default function Cadastro() {
   const [gender, setGender] = useState("");
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [estado, setEstado] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const router = useRouter();
 
@@ -60,9 +58,7 @@ export default function Cadastro() {
   }
 
   const handleSubmit = async () => {
-    if (loading) return;
-
-    const errors: string[] = [];
+  const errors: string[] = [];
 
     if (!nome.trim()) errors.push("Nome é obrigatório");
     if (!email.trim()) errors.push("Email é obrigatório");
@@ -211,11 +207,7 @@ export default function Cadastro() {
 
           <View style={styles.buttonarea}>
             <Button onPress={handleSubmit}>
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
                 <Text style={typography.buttonText}>Continuar</Text>
-              )}
             </Button>
           </View>
         </View>
