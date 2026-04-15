@@ -34,10 +34,21 @@ export const updateUsuarioFoto = async (userId, fotoBase64) => {
       : fotoBase64;
 
   const payload = { foto: fotoNormalizada };
+  const endpoints = [`/Usuario/${userId}/foto`, `/usuario/${userId}/foto`];
 
-  const response = await globalapi.put(`/Usuario/${userId}/foto`, payload);
+   for (const endpoint of endpoints) {
+    try {
+      const response = await globalapi.put(endpoint, payload);
+      return response.data;
+    } catch (error) {
+      const status = error?.response?.status;
+      if (status !== 404) {
+        throw error;
+      }
+    }
+  }
 
-  return response.data;
+  throw new Error("ENDPOINT_USUARIO_FOTO_NOT_FOUND");
 };
 
 export const normalizeImageUri = (value) => {
