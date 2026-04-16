@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -36,6 +37,9 @@ export default function AccCreate() {
   const [cpf, setCpf] = useState("");
   const [cpfPersistido, setCpfPersistido] = useState("");
   const [userId, setUserId] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [gender, setGender] = useState("");
+  const [telefoneUsuario, setTelefoneUsuario] = useState("");
 
   const [estado, setEstado] = useState("");
   const [municipio, setMunicipio] = useState("");
@@ -58,6 +62,26 @@ export default function AccCreate() {
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   const [erroCep, setErroCep] = useState("");
+
+    function debugAlert(title: string, details: Record<string, any>) {
+    const formatValue = (value: any) => {
+      if (value == null) return "null";
+      if (typeof value === "string") return value;
+
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        return String(value);
+      }
+    };
+
+    const message = Object.entries(details)
+      .map(([key, value]) => `${key}: ${formatValue(value)}`)
+      .join("\n\n")
+      .slice(0, 3500);
+
+    Alert.alert(title, message || "Sem detalhes");
+  }
 
   // =========================
   // CEP
@@ -88,8 +112,27 @@ async function handleCepChange(text: string) {
     setMunicipio(data.localidade || "");
     setLogradouro(data.logradouro || "");
     setBairro(data.bairro || "");
-  } catch {
-    setErroCep("Erro ao buscar CEP");
+    } catch (error: any) {
+    const cepError = error?.message || "CEP_REDE_FALHOU";
+
+    if (cepError === "CEP_NAO_ENCONTRADO") {
+      setErroCep("CEP não encontrado");
+    } else if (cepError === "CEP_TIMEOUT") {
+      setErroCep("Tempo esgotado ao consultar CEP");
+    } else if (cepError.startsWith("CEP_HTTP_")) {
+      setErroCep(`Falha no serviço de CEP (${cepError.replace("CEP_HTTP_", "HTTP ")})`);
+    } else if (cepError === "CEP_REDE_FALHOU") {
+      setErroCep("Falha de rede ao consultar CEP");
+    } else {
+      setErroCep("Erro ao buscar CEP");
+    }
+
+    debugAlert("DEBUG - Falha consulta CEP", {
+      cepDigitado: cepLimpo,
+      errorCode: cepError,
+      hint:
+        "Se aparecer HTTP 403/407 ou rede, pode ser firewall/proxy bloqueando viacep.com.br",
+    });
   } finally {
     setLoadingCep(false);
   }
@@ -147,18 +190,30 @@ async function handleCepChange(text: string) {
           : profilePhotoBase64;
 
       if (normalizedProfilePhotoBase64) {
-        await updateUsuarioFoto(
-  Number(userId),
-  normalizedProfilePhotoBase64
-);
+         try {
+          await updateUsuarioFoto(Number(userId), normalizedProfilePhotoBase64);
+        } catch (photoError: any) {
+          console.log("WARN FOTO USUARIO:", photoError?.message || photoError);
+          debugAlert("DEBUG - Falha ao enviar foto de perfil", {
+            endpointTentado: "/Usuario/{id}/foto | /usuario/{id}/foto",
+            userId: Number(userId),
+            status: photoError?.response?.status ?? "sem status",
+            url: photoError?.config?.url ?? "sem url",
+            message: photoError?.message ?? "sem mensagem",
+            responseData: photoError?.response?.data ?? "sem body",
+          });
+        }
       }
 
       const prestadorPayload = {
         usuario: { id: Number(userId) },
         nome,
         cpf: cpfFinal,
-        genero: "Não informado",
-        telefone: contatos?.[0]?.valor || "",
+        dataNascimento: birthDate
+          ? String(birthDate).split("T")[0]
+          : undefined,
+        genero: gender || "Não informado",
+        telefone: telefoneUsuario || contatos?.[0]?.valor || "",
         logradouro,
         numeroResidencial: numero,
         complemento,
@@ -179,7 +234,7 @@ async function handleCepChange(text: string) {
       const servicoPayload = {
         nome,
         descricao,
-        statusServico: true,
+        statusServico: "ATIVO",
         prestadorId,
         categoriaId: Number(categoria),
         foto: eventImage?.base64 || null,
@@ -192,6 +247,19 @@ async function handleCepChange(text: string) {
 
       await globalapi.post("servico", servicoPayload);
 
+       if (contatos.length > 0) {
+        await Promise.all(
+          contatos.map((contato) =>
+            globalapi.post("contato", {
+              prestadorId,
+              tipoContato: contato.tipo,
+              link: contato.valor,
+              statusContato: "ATIVO",
+            }),
+          ),
+        );
+      }
+
       await clearPendingPrestadorProfile();
 
       console.log("=== SUCCESS ===");
@@ -202,6 +270,25 @@ async function handleCepChange(text: string) {
       console.log("=== ERROR ===");
       console.log(error?.response?.data || error.message);
 
+            debugAlert("DEBUG - Erro no cadastro de perfil", {
+        status: error?.response?.status ?? "sem status",
+        url: error?.config?.url ?? "sem url",
+        message: error?.message ?? "sem mensagem",
+        responseData: error?.response?.data ?? "sem body",
+        prestador: {
+          nome,
+          cpf: cpfFinal,
+          cidade: municipio,
+          uf: estado,
+          contato: contatos?.[0]?.valor || null,
+        },
+        servico: {
+          nome,
+          categoriaId: Number(categoria),
+          temFotoEvento: !!eventImage?.base64,
+        },
+      });
+
       alert(error?.response?.data?.message || "Erro ao criar perfil");
     } finally {
       setLoading(false);
@@ -211,6 +298,7 @@ async function handleCepChange(text: string) {
   // =========================
   // LOAD USER
   // =========================
+  
 
     const paramUserId = params.userId;
   const paramCpf = params.cpf;
@@ -223,15 +311,32 @@ async function handleCepChange(text: string) {
          paramUserId ?? pending?.userId ?? user?.id ?? "",
       );
 
-       const resolvedCpf = String(paramCpf ?? pending?.cpf ?? user?.cpf ?? "");
-
+             const resolvedCpf = String(paramCpf ?? pending?.cpf ?? user?.cpf ?? "");
+      const resolvedBirthDate = String(
+        params.birthDate ?? pending?.birthDate ?? "",
+      );
+      const resolvedGender = String(params.gender ?? pending?.gender ?? "");
+      const resolvedTelefone = String(
+        params.telefone ?? pending?.telefone ?? "",
+      );
       setUserId(resolvedUserId);
       setCpf(resolvedCpf);
       setCpfPersistido(resolvedCpf);
+      setBirthDate(resolvedBirthDate);
+      setGender(resolvedGender);
+      setTelefoneUsuario(resolvedTelefone);
     }
 
     load();
-  }, [paramCpf, paramUserId, user?.cpf, user?.id]);
+  }, [
+    paramCpf,
+    paramUserId,
+    params.birthDate,
+    params.gender,
+    params.telefone,
+    user?.cpf,
+    user?.id,
+  ]);
 
   // =========================
   // LOAD CATEGORIAS

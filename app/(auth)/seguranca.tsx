@@ -52,9 +52,6 @@ export default function Seguranca() {
         nome,
         email,
         senha,
-        cpf,
-        telefone,
-        dataNascimento: birthDate,
         nivelAcesso: "PRESTADOR",
         statusUsuario: true,
         ps_01: chave1,
@@ -77,6 +74,10 @@ export default function Seguranca() {
         cpf,
         nome,
         email,
+        telefone,
+        birthDate,
+        gender,
+        estado,
       });
 
       // ===== LOGIN =====
