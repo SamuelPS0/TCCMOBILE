@@ -46,6 +46,16 @@ export default function Seguranca() {
       const cpf = String(params.cpf ?? "");
       const telefone = String(params.telefone ?? "");
       const birthDate = String(params.birthDate ?? "");
+      const rawGender = String(params.gender ?? "").toLowerCase();
+      const estado = String(params.estado ?? "");
+      const normalizedGender =
+        rawGender === "m"
+          ? "Masculino"
+          : rawGender === "f"
+            ? "Feminino"
+            : rawGender === "o"
+              ? "Outro"
+              : "Não informado";
 
       // ===== PAYLOAD COMPLETO =====
       const payload = {
@@ -76,7 +86,7 @@ export default function Seguranca() {
         email,
         telefone,
         birthDate,
-        gender,
+        gender: normalizedGender,
         estado,
       });
 

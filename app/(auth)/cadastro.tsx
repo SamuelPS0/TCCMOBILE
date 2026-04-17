@@ -1,13 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "../../assets/components/Button";
 import { DateInput } from "../../assets/components/DateInput";
@@ -17,21 +11,33 @@ import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
 
 // ================== MÁSCARAS ==================
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
 function maskCPF(value: string) {
-  return value
-    .replace(/\D/g, "")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
-    .slice(0, 14);
+  const digits = onlyDigits(value).slice(0, 11);
+
+  return digits
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1-$2");
+}
+
+function maskDDD(value: string) {
+  return onlyDigits(value).slice(0, 2);
 }
 
 function maskPhone(value: string) {
-  return value
-    .replace(/\D/g, "")
-    .replace(/^(\d{2})(\d)/g, "($1) $2")
-    .replace(/(\d{5})(\d{1,4})$/, "$1-$2")
-    .slice(0, 15);
+  const digits = onlyDigits(value).slice(0, 9);
+
+  if (digits.length <= 4) return digits;
+
+  if (digits.length <= 8) {
+    return digits.replace(/(\d{4})(\d+)/, "$1-$2");
+  }
+
+  return digits.replace(/(\d{5})(\d+)/, "$1-$2");
 }
 
 export default function Cadastro() {
@@ -58,18 +64,46 @@ export default function Cadastro() {
   }
 
   const handleSubmit = async () => {
-  const errors: string[] = [];
+    const errors: string[] = [];
 
-    if (!nome.trim()) errors.push("Nome é obrigatório");
-    if (!email.trim()) errors.push("Email é obrigatório");
-    if (!email.includes("@")) errors.push("Email deve conter '@'");
-    if (!senha) errors.push("Senha é obrigatória");
-    if (senha.length < 6) errors.push("Senha deve ter no mínimo 6 caracteres");
-    if (!cpf.trim()) errors.push("CPF é obrigatório");
-    if (cpf.replace(/\D/g, "").length !== 11) errors.push("CPF inválido");
-    if (!telefone || telefone.replace(/\D/g, "").length < 8)
+    const nomeTrim = nome.trim();
+    const emailTrim = email.trim().toLowerCase();
+    const cpfLimpo = onlyDigits(cpf);
+    const dddLimpo = onlyDigits(telefoneDDD);
+    const telefoneLimpo = onlyDigits(telefone);
+    const telefoneCompleto = dddLimpo + telefoneLimpo;
+
+    if (!nomeTrim) errors.push("Nome é obrigatório");
+
+    if (!emailTrim) {
+      errors.push("Email é obrigatório");
+    } else if (!emailTrim.includes("@")) {
+      errors.push("Email deve conter '@'");
+    }
+
+    if (!senha) {
+      errors.push("Senha é obrigatória");
+    } else if (senha.length < 6) {
+      errors.push("Senha deve ter no mínimo 6 caracteres");
+    }
+
+    if (!cpfLimpo) {
+      errors.push("CPF é obrigatório");
+    } else if (cpfLimpo.length !== 11) {
+      errors.push("CPF inválido");
+    }
+
+    if (dddLimpo.length !== 2) {
+      errors.push("DDD inválido");
+    }
+
+    if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
       errors.push("Telefone inválido");
+    }
+
     if (!birthDate) errors.push("Data de nascimento obrigatória");
+    if (!gender) errors.push("Gênero é obrigatório");
+    if (!estado) errors.push("Estado é obrigatório");
 
     if (errors.length > 0) {
       console.log("Erros:", errors);
@@ -77,15 +111,11 @@ export default function Cadastro() {
       return;
     }
 
-    const cpfLimpo = cpf.replace(/\D/g, "");
-    const telefoneCompleto =
-      telefoneDDD.replace(/\D/g, "") + telefone.replace(/\D/g, "");
-
     router.push({
       pathname: "/(auth)/seguranca",
       params: {
-        nome: nome.trim(),
-        email: email.trim().toLowerCase(),
+        nome: nomeTrim,
+        email: emailTrim,
         senha,
         cpf: cpfLimpo,
         telefone: telefoneCompleto,
@@ -142,9 +172,9 @@ export default function Cadastro() {
 
           <View style={styles.rowInputs}>
             <Input
-              label="DDD"
+              label="DDD*"
               value={telefoneDDD}
-              onChangeText={(text) => setTelefoneDDD(text.replace(/\D/g, ""))}
+              onChangeText={(text) => setTelefoneDDD(maskDDD(text))}
               width="21%"
               keyboardType="numeric"
             />
@@ -161,6 +191,7 @@ export default function Cadastro() {
             label="CPF*"
             value={cpf}
             onChangeText={(text) => setCpf(maskCPF(text))}
+            keyboardType="numeric"
           />
 
           <Input
@@ -186,7 +217,7 @@ export default function Cadastro() {
             />
 
             <SelectInput
-              label="Gênero"
+              label="Gênero*"
               selectedValue={gender}
               onValueChange={setGender}
               width="48%"
@@ -199,7 +230,7 @@ export default function Cadastro() {
           </View>
 
           <SelectInput
-            label="Estado"
+            label="Estado*"
             selectedValue={estado}
             onValueChange={setEstado}
             options={estados}
@@ -207,7 +238,7 @@ export default function Cadastro() {
 
           <View style={styles.buttonarea}>
             <Button onPress={handleSubmit}>
-                <Text style={typography.buttonText}>Continuar</Text>
+              <Text style={typography.buttonText}>Continuar</Text>
             </Button>
           </View>
         </View>

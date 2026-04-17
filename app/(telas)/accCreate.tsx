@@ -63,7 +63,7 @@ export default function AccCreate() {
   const [loadingCep, setLoadingCep] = useState(false);
   const [erroCep, setErroCep] = useState("");
 
-    function debugAlert(title: string, details: Record<string, any>) {
+  function debugAlert(title: string, details: Record<string, any>) {
     const formatValue = (value: any) => {
       if (value == null) return "null";
       if (typeof value === "string") return value;
@@ -86,57 +86,58 @@ export default function AccCreate() {
   // =========================
   // CEP
   // =========================
-function formatCep(value: string) {
-  const cep = value.replace(/\D/g, "");
-  return cep.replace(/^(\d{5})(\d)/, "$1-$2");
-}
-
-async function handleCepChange(text: string) {
-  const cepLimpo = text.replace(/\D/g, "");
-  setCep(cepLimpo);
-
-  if (cepLimpo.length !== 8) return;
-
-  try {
-    setLoadingCep(true);
-    setErroCep("");
-
-    const data = await buscarCep(cepLimpo);
-
-    if (data.erro) {
-      setErroCep("CEP inválido");
-      return;
-    }
-
-    setEstado(data.uf || "");
-    setMunicipio(data.localidade || "");
-    setLogradouro(data.logradouro || "");
-    setBairro(data.bairro || "");
-    } catch (error: any) {
-    const cepError = error?.message || "CEP_REDE_FALHOU";
-
-    if (cepError === "CEP_NAO_ENCONTRADO") {
-      setErroCep("CEP não encontrado");
-    } else if (cepError === "CEP_TIMEOUT") {
-      setErroCep("Tempo esgotado ao consultar CEP");
-    } else if (cepError.startsWith("CEP_HTTP_")) {
-      setErroCep(`Falha no serviço de CEP (${cepError.replace("CEP_HTTP_", "HTTP ")})`);
-    } else if (cepError === "CEP_REDE_FALHOU") {
-      setErroCep("Falha de rede ao consultar CEP");
-    } else {
-      setErroCep("Erro ao buscar CEP");
-    }
-
-    debugAlert("DEBUG - Falha consulta CEP", {
-      cepDigitado: cepLimpo,
-      errorCode: cepError,
-      hint:
-        "Se aparecer HTTP 403/407 ou rede, pode ser firewall/proxy bloqueando viacep.com.br",
-    });
-  } finally {
-    setLoadingCep(false);
+  function formatCep(value: string) {
+    const cep = value.replace(/\D/g, "");
+    return cep.replace(/^(\d{5})(\d)/, "$1-$2");
   }
-}
+
+  async function handleCepChange(text: string) {
+    const cepLimpo = text.replace(/\D/g, "");
+    setCep(cepLimpo);
+
+    if (cepLimpo.length !== 8) return;
+
+    try {
+      setLoadingCep(true);
+      setErroCep("");
+
+      const data = await buscarCep(cepLimpo);
+
+      if (data.erro) {
+        setErroCep("CEP inválido");
+        return;
+      }
+
+      setEstado(data.uf || "");
+      setMunicipio(data.localidade || "");
+      setLogradouro(data.logradouro || "");
+      setBairro(data.bairro || "");
+    } catch (error: any) {
+      const cepError = error?.message || "CEP_REDE_FALHOU";
+
+      if (cepError === "CEP_NAO_ENCONTRADO") {
+        setErroCep("CEP não encontrado");
+      } else if (cepError === "CEP_TIMEOUT") {
+        setErroCep("Tempo esgotado ao consultar CEP");
+      } else if (cepError.startsWith("CEP_HTTP_")) {
+        setErroCep(
+          `Falha no serviço de CEP (${cepError.replace("CEP_HTTP_", "HTTP ")})`,
+        );
+      } else if (cepError === "CEP_REDE_FALHOU") {
+        setErroCep("Falha de rede ao consultar CEP");
+      } else {
+        setErroCep("Erro ao buscar CEP");
+      }
+
+      debugAlert("DEBUG - Falha consulta CEP", {
+        cepDigitado: cepLimpo,
+        errorCode: cepError,
+        hint: "Se aparecer HTTP 403/407 ou rede, pode ser firewall/proxy bloqueando viacep.com.br",
+      });
+    } finally {
+      setLoadingCep(false);
+    }
+  }
 
   // =========================
   // CONTATOS
@@ -190,7 +191,7 @@ async function handleCepChange(text: string) {
           : profilePhotoBase64;
 
       if (normalizedProfilePhotoBase64) {
-         try {
+        try {
           await updateUsuarioFoto(Number(userId), normalizedProfilePhotoBase64);
         } catch (photoError: any) {
           console.log("WARN FOTO USUARIO:", photoError?.message || photoError);
@@ -210,7 +211,9 @@ async function handleCepChange(text: string) {
         nome,
         cpf: cpfFinal,
         dataNascimento: birthDate
-          ? String(birthDate).split("T")[0]
+          ? String(birthDate).includes("T")
+            ? birthDate
+            : `${birthDate}T00:00:00`
           : undefined,
         genero: gender || "Não informado",
         telefone: telefoneUsuario || contatos?.[0]?.valor || "",
@@ -247,7 +250,7 @@ async function handleCepChange(text: string) {
 
       await globalapi.post("servico", servicoPayload);
 
-       if (contatos.length > 0) {
+      if (contatos.length > 0) {
         await Promise.all(
           contatos.map((contato) =>
             globalapi.post("contato", {
@@ -270,7 +273,7 @@ async function handleCepChange(text: string) {
       console.log("=== ERROR ===");
       console.log(error?.response?.data || error.message);
 
-            debugAlert("DEBUG - Erro no cadastro de perfil", {
+      debugAlert("DEBUG - Erro no cadastro de perfil", {
         status: error?.response?.status ?? "sem status",
         url: error?.config?.url ?? "sem url",
         message: error?.message ?? "sem mensagem",
@@ -298,9 +301,8 @@ async function handleCepChange(text: string) {
   // =========================
   // LOAD USER
   // =========================
-  
 
-    const paramUserId = params.userId;
+  const paramUserId = params.userId;
   const paramCpf = params.cpf;
 
   useEffect(() => {
@@ -308,10 +310,10 @@ async function handleCepChange(text: string) {
       const pending = await getPendingPrestadorProfile();
 
       const resolvedUserId = String(
-         paramUserId ?? pending?.userId ?? user?.id ?? "",
+        paramUserId ?? pending?.userId ?? user?.id ?? "",
       );
 
-             const resolvedCpf = String(paramCpf ?? pending?.cpf ?? user?.cpf ?? "");
+      const resolvedCpf = String(paramCpf ?? pending?.cpf ?? user?.cpf ?? "");
       const resolvedBirthDate = String(
         params.birthDate ?? pending?.birthDate ?? "",
       );
@@ -387,10 +389,10 @@ async function handleCepChange(text: string) {
           />
 
           <Input
-  label="CEP"
-  value={formatCep(cep)}
-  onChangeText={handleCepChange}
-/>
+            label="CEP"
+            value={formatCep(cep)}
+            onChangeText={handleCepChange}
+          />
 
           {loadingCep && <Text>Buscando CEP...</Text>}
           {erroCep && <Text style={{ color: "red" }}>{erroCep}</Text>}

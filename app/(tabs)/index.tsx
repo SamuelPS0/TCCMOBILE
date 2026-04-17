@@ -41,9 +41,20 @@ export default function Landing() {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
 
   const hasServico = !!servico?.id;
+  console.log("[HOME] hasServico:", hasServico, "servico:", servico);
+
+  function sanitizeServico(servico: any) {
+    if (!servico) return servico;
+
+    return {
+      ...servico,
+      foto: servico?.foto ? `[base64 ${servico.foto.length} chars]` : null,
+    };
+  }
 
   const loadHomeCard = useCallback(async () => {
     if (!user?.id) {
+      console.log("[HOME] user.id ausente");
       setPrestador(null);
       setServico(null);
       setFotoUsuario(null);
@@ -53,35 +64,78 @@ export default function Landing() {
 
     try {
       setLoadingCard(true);
+
+      console.log("[HOME] ===== INICIO loadHomeCard =====");
+      console.log("[HOME] user logado:", user);
+
       const [prestadorData, usuarioData] = await Promise.all([
         getPrestadorByUsuario(user.id),
         getUsuarioById(user.id),
       ]);
 
+      console.log("[HOME] prestadorData:", prestadorData);
+      console.log("[HOME] usuarioData:", usuarioData);
+
       setPrestador(prestadorData || null);
       setFotoUsuario(normalizeImageUri(usuarioData?.foto));
 
       if (!prestadorData?.id) {
+        console.log(
+          "[HOME] Nenhum prestador encontrado para user.id =",
+          user.id,
+        );
         setServico(null);
         return;
       }
 
       const servicos = await getServicosByPrestador(prestadorData.id);
-      const servicoAtivo = servicos.find((item: any) => {
-        const status = String(item?.statusServico || "").toUpperCase();
-        return status === "ATIVO" || item?.statusServico === true;
-      });
+
+      console.log(
+        "[HOME] servicos retornados:",
+        Array.isArray(servicos)
+          ? servicos.map((s: any) => sanitizeServico(s))
+          : servicos,
+      );
+      console.log("[HOME] prestadorData.id usado na busca:", prestadorData.id);
+
+      const servicoAtivo = Array.isArray(servicos)
+        ? servicos.find((item: any) => {
+            const statusOriginal = item?.statusServico;
+            const statusNormalizado = String(
+              statusOriginal || "",
+            ).toUpperCase();
+
+            console.log("[HOME] analisando serviço:", {
+              id: item?.id,
+              nome: item?.nome,
+              statusOriginal,
+              statusNormalizado,
+              prestadorId:
+                item?.prestadorId ??
+                item?.prestador?.id ??
+                "sem prestadorId no objeto",
+            });
+
+            return statusNormalizado === "ATIVO" || statusOriginal === true;
+          })
+        : null;
+
+      console.log("[HOME] servicoAtivo encontrado:", servicoAtivo);
 
       setServico(servicoAtivo || null);
-    } catch (error) {
-      console.log("Erro ao carregar card da home:", error);
+    } catch (error: any) {
+      console.log("[HOME] Erro ao carregar card da home:", error);
+      console.log("[HOME] error.response?.status:", error?.response?.status);
+      console.log("[HOME] error.response?.data:", error?.response?.data);
+
       setPrestador(null);
       setServico(null);
       setFotoUsuario(null);
     } finally {
+      console.log("[HOME] ===== FIM loadHomeCard =====");
       setLoadingCard(false);
     }
-  }, [user?.id]);
+  }, [user]);
 
   useFocusEffect(
     useCallback(() => {
@@ -283,7 +337,7 @@ const styles = StyleSheet.create({
   },
 
   serviceCard: {
-    width: "86%",
+    width: "80%",
     alignSelf: "center",
     marginTop: 36,
     backgroundColor: "#fff",
@@ -298,26 +352,27 @@ const styles = StyleSheet.create({
   },
   serviceTitle: {
     fontFamily: "Poppins_800ExtraBold",
-    fontSize: 35,
+    fontSize: 30,
     color: "#F05221",
     textAlign: "center",
   },
   divider: {
-    marginTop: 12,
-    width: "120%",
+    marginTop: 8,
+    width: "100%",
     borderBottomColor: "#c7c7c7",
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
   },
   avatar: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: 140,
+    height: 140,
+    borderRadius: 100,
     marginTop: 18,
     backgroundColor: "#ddd",
   },
   sectionTitle: {
     marginTop: 12,
-    fontSize: 31,
+    fontSize: 25,
+    fontWeight: 500,
     fontFamily: "Poppins_700Bold",
     color: "#111",
   },
@@ -332,9 +387,10 @@ const styles = StyleSheet.create({
   },
   serviceImage: {
     marginTop: 8,
-    width: "100%",
+    width: "95%",
     height: 140,
     borderRadius: 12,
+    marginBottom: 10,
     backgroundColor: "#ddd",
   },
   feedbackButtonsRow: {
@@ -352,6 +408,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderColor: "#ddd",
     borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   feedbackButtonTextFeedback: {
     color: "#2f9f4f",
