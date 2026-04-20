@@ -179,8 +179,10 @@ export default function Landing() {
       setServico(null);
       setFotoUsuario(null);
     } finally {
-      console.log("[HOME] ===== FIM loadHomeCard =====");
-      setLoadingCard(false);
+      // Em vez de fechar direto, vamos sinalizar o sucesso
+      setTimeout(() => {
+        setLoadingCard(false);
+      }, 1500); // 1.5 segundos para o usuário ver a carinha de sucesso
     }
   }, [user]);
 
@@ -239,8 +241,12 @@ export default function Landing() {
 
         {loadingCard ? (
           <View style={styles.loaderBox}>
-            <ActivityIndicator size="large" color="#F05221" />
-            <Text style={styles.loaderText}>Carregando card...</Text>
+            <ActivityIndicator
+              size="large"
+              color="#FFFFFF" // Mudamos para branco para combinar com o texto
+              style={{ transform: [{ scale: 2 }] }} // Dobra o tamanho do ícone
+            />
+            <Text style={styles.loaderText}>Carregando usuário...</Text>
           </View>
         ) : !hasServico ? (
           <Pressable onPress={handleCreateProfile}>
@@ -266,7 +272,7 @@ export default function Landing() {
               style={styles.avatar}
             />
 
-            <Text style={styles.sectionTitle}>Descrição</Text>
+            <Text style={styles.sectionTitle}>DESCRIÇÃO</Text>
             <Text style={styles.descriptionText}>
               {breakLineEveryNChars(
                 servico?.descricao || "Sem descrição cadastrada.",
@@ -274,7 +280,7 @@ export default function Landing() {
               )}
             </Text>
 
-            <Text style={styles.sectionTitle}>Fotografia</Text>
+            <Text style={styles.sectionTitle}>FOTOGRAFIA</Text>
             <Image
               source={{
                 uri:
@@ -364,13 +370,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loaderBox: {
-    marginTop: 120,
+    // Isso garante que ele ocupe a tela toda e centralize o conteúdo
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    gap: 10,
+    gap: 25, // Aumentei o espaço entre o ícone e o texto
   },
   loaderText: {
-    color: "#444",
-    fontSize: 14,
+    color: "#FFFFFF", // Texto branco
+    fontSize: 22, // Fonte grande
+    fontFamily: "Poppins_700Bold", // Usando Poppins (certifique-se de que está carregada)
+    textAlign: "center",
   },
   createCard: {
     width: 260,
@@ -419,23 +429,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
   },
   sectionTitle: {
-    marginTop: 12,
-    fontSize: 25,
-    fontWeight: "500",
+    marginTop: 15,
+    fontSize: 20,
+    fontWeight: "800",
     fontFamily: "Poppins_700Bold",
     color: "#111",
   },
   descriptionText: {
-    marginTop: 8,
-    width: "100%",
-    textAlign: "center",
+    width: "95%",
+    textAlign: "justify",
     color: "#555",
     lineHeight: 19,
     flexShrink: 1,
     minHeight: 60,
   },
   serviceImage: {
-    marginTop: 8,
     width: "95%",
     height: 140,
     borderRadius: 12,

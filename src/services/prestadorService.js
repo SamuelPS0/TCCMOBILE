@@ -82,18 +82,22 @@ export const updateUsuarioFoto = async (userId, fotoBase64) => {
   throw new Error("ENDPOINT_USUARIO_FOTO_NOT_FOUND");
 };
 
-export const normalizeImageUri = (value) => {
+export function normalizeImageUri(value) {
   if (!value) return null;
 
+  const trimmed = String(value).trim();
+
+  if (!trimmed) return null;
+
   if (
-    typeof value === "string" &&
-    (value.startsWith("http://") ||
-      value.startsWith("https://") ||
-      value.startsWith("file://") ||
-      value.startsWith("data:"))
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("file://") ||
+    trimmed.startsWith("content://") ||
+    trimmed.startsWith("data:image/")
   ) {
-    return value;
+    return trimmed;
   }
 
-  return `data:image/jpeg;base64,${value}`;
-};
+  return `data:image/jpeg;base64,${trimmed}`;
+}

@@ -36,9 +36,13 @@ export default function Perfil() {
 
         <View style={styles.content}>
           <View style={styles.contentheader}>
-            <Text style={typography.cardtitle}>Minha conta</Text>
-            {!!user?.nome && <Text style={styles.userInfo}>{user.nome}</Text>}
-            {!!user?.email && <Text style={styles.userInfo}>{user.email}</Text>}
+            <Ionicons
+              name="cog-outline"
+              size={24}
+              color="#333"
+              style={{ marginRight: 13, marginLeft: 12 }}
+            />
+            <Text style={typography.cardtext}>Configurações</Text>
           </View>
 
           <View style={styles.contentbody}>
@@ -52,7 +56,19 @@ export default function Perfil() {
                 color="#333"
                 style={{ marginRight: 13, marginLeft: 12 }}
               />
-              <Text style={typography.cardtext}>Informações de usuário</Text>
+              <Text style={typography.cardtext}>Informações pessoais</Text>
+            </Pressable>
+            <Pressable
+              style={styles.buttons}
+              onPress={() => router.push("/(telas)/workinfo")}
+            >
+              <Ionicons
+                name="person-circle-outline"
+                size={24}
+                color="#333"
+                style={{ marginRight: 5, marginLeft: 12 }}
+              />
+              <Text style={typography.cardtext}>Informações de prestador</Text>
             </Pressable>
 
             <Pressable style={styles.buttons} onPress={handleLogout}>
@@ -78,7 +94,7 @@ const styles = StyleSheet.create({
   },
   content: {
     width: 260,
-    minHeight: 260,
+    minHeight: 290,
     marginTop: 150,
 
     backgroundColor: "#fff",
@@ -96,7 +112,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   contentheader: {
-    padding: 20,
+    padding: 10,
     width: "100%",
     borderRadius: 8,
     borderBottomWidth: 1,
