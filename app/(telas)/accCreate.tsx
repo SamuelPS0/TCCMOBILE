@@ -10,7 +10,7 @@ import {
 } from "react-native";
 
 import { buscarCep } from "../../assets/api/apiviacep";
-import { globalapi } from "../../assets/api/globalapi";
+import { globalapi, sanitizeForLog } from "../../assets/api/globalapi";
 import BottomNav from "../../assets/components/BottomNav";
 import { Button } from "../../assets/components/Button";
 import { Header } from "../../assets/components/Header";
@@ -257,8 +257,8 @@ export default function AccCreate() {
       await globalapi.post("servico", servicoPayload);
 
       if (contatosParaEnviar.length > 0) {
-        await Promise.all(
-          contatosParaEnviar.map(async (contato) => {
+        const contatosComResultado = await Promise.allSettled(
+          contatosParaEnviar.map(async (contato, index) => {
             const contatoPayload = {
               prestadorId,
               tipoContato: contato.tipo,
@@ -266,22 +266,78 @@ export default function AccCreate() {
               statusContato: "ATIVO",
             };
 
-            console.log("DEBUG CONTATO -> endpoint:", "contato");
-            console.log("DEBUG CONTATO -> payload:", contatoPayload);
+            const endpointPrimario = "contato";
+            const endpointFallback = "Contato";
+            let endpointFinal = endpointPrimario;
+
+            console.log(
+              `[CONTATO ${index + 1}] endpoint inicial:`,
+              endpointPrimario,
+            );
+            console.log(
+              `[CONTATO ${index + 1}] payload final:`,
+              sanitizeForLog(contatoPayload),
+            );
 
             try {
-              await globalapi.post("contato", contatoPayload);
+              const response = await globalapi.post(
+                endpointPrimario,
+                contatoPayload,
+              );
+              console.log(
+                `[CONTATO ${index + 1}] resposta sucesso (${endpointFinal}):`,
+                sanitizeForLog(response.data),
+              );
+              return { endpointFinal, response: response.data };
             } catch (errorContato: any) {
-              // fallback para backend com endpoint capitalizado
               if (errorContato?.response?.status === 404) {
-                console.log("DEBUG CONTATO -> fallback endpoint:", "Contato");
-                await globalapi.post("Contato", contatoPayload);
-              } else {
-                throw errorContato;
+                endpointFinal = endpointFallback;
+                console.log(
+                  `[CONTATO ${index + 1}] fallback endpoint:`,
+                  endpointFallback,
+                );
+                const fallbackResponse = await globalapi.post(
+                  endpointFallback,
+                  contatoPayload,
+                );
+                console.log(
+                  `[CONTATO ${index + 1}] resposta sucesso (${endpointFinal}):`,
+                  sanitizeForLog(fallbackResponse.data),
+                );
+                return { endpointFinal, response: fallbackResponse.data };
               }
+              console.log(`[CONTATO ${index + 1}] falha:`, {
+                endpointFinal,
+                status: errorContato?.response?.status ?? "sem status",
+                message: errorContato?.message ?? "sem mensagem",
+                responseData: sanitizeForLog(
+                  errorContato?.response?.data ?? null,
+                ),
+              });
+              throw errorContato;
             }
           }),
         );
+
+        const falhasContato = contatosComResultado
+          .map((result, index) => ({ result, index }))
+          .filter((item) => item.result.status === "rejected");
+
+        if (falhasContato.length > 0) {
+          debugAlert("Alguns contatos não foram salvos", {
+            totalContatos: contatosParaEnviar.length,
+            contatosComFalha: falhasContato.length,
+            detalhes: falhasContato.map(({ result, index }) => ({
+              contatoIndex: index + 1,
+              motivo:
+                result.status === "rejected"
+                  ? (result.reason?.response?.data?.message ??
+                    result.reason?.message ??
+                    "Falha desconhecida")
+                  : "",
+            })),
+          });
+        }
       }
 
       await clearPendingPrestadorProfile();

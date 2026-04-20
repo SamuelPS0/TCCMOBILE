@@ -41,14 +41,49 @@ export default function Landing() {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
 
   const hasServico = !!servico?.id;
-  console.log("[HOME] hasServico:", hasServico, "servico:", servico);
 
-  function sanitizeServico(servico: any) {
-    if (!servico) return servico;
+  function sanitizeDeep(value: any, keyName = ""): any {
+    if (value == null) return value;
 
+    if (typeof value === "string") {
+      const lowerKey = keyName.toLowerCase();
+
+      if (lowerKey === "senha") {
+        return "[oculta]";
+      }
+
+      const pareceBase64 =
+        value.length > 200 &&
+        !value.startsWith("http") &&
+        /^[A-Za-z0-9+/=]+$/.test(value.slice(0, 200));
+
+      if (lowerKey === "foto" && pareceBase64) {
+        return `[base64 ${value.length} chars]`;
+      }
+
+      return value;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => sanitizeDeep(item));
+    }
+
+    if (typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value).map(([k, v]) => [k, sanitizeDeep(v, k)]),
+      );
+    }
+
+    return value;
+  }
+
+  function sanitizeError(error: any) {
     return {
-      ...servico,
-      foto: servico?.foto ? `[base64 ${servico.foto.length} chars]` : null,
+      message: error?.message ?? "sem mensagem",
+      status: error?.response?.status ?? "sem status",
+      data: sanitizeDeep(error?.response?.data ?? null),
+      url: error?.config?.url ?? "sem url",
+      method: error?.config?.method ?? "sem método",
     };
   }
 
@@ -66,15 +101,15 @@ export default function Landing() {
       setLoadingCard(true);
 
       console.log("[HOME] ===== INICIO loadHomeCard =====");
-      console.log("[HOME] user logado:", user);
+      console.log("[HOME] user logado:", sanitizeDeep(user));
 
       const [prestadorData, usuarioData] = await Promise.all([
         getPrestadorByUsuario(user.id),
         getUsuarioById(user.id),
       ]);
 
-      console.log("[HOME] prestadorData:", prestadorData);
-      console.log("[HOME] usuarioData:", usuarioData);
+      console.log("[HOME] prestadorData:", sanitizeDeep(prestadorData));
+      console.log("[HOME] usuarioData:", sanitizeDeep(usuarioData));
 
       setPrestador(prestadorData || null);
       setFotoUsuario(normalizeImageUri(usuarioData?.foto));
@@ -93,8 +128,8 @@ export default function Landing() {
       console.log(
         "[HOME] servicos retornados:",
         Array.isArray(servicos)
-          ? servicos.map((s: any) => sanitizeServico(s))
-          : servicos,
+          ? servicos.map((s: any) => sanitizeDeep(s))
+          : sanitizeDeep(servicos),
       );
       console.log("[HOME] prestadorData.id usado na busca:", prestadorData.id);
 
@@ -105,28 +140,40 @@ export default function Landing() {
               statusOriginal || "",
             ).toUpperCase();
 
-            console.log("[HOME] analisando serviço:", {
-              id: item?.id,
-              nome: item?.nome,
-              statusOriginal,
-              statusNormalizado,
-              prestadorId:
-                item?.prestadorId ??
-                item?.prestador?.id ??
-                "sem prestadorId no objeto",
-            });
+            console.log(
+              "[HOME] analisando serviço:",
+              sanitizeDeep({
+                id: item?.id,
+                nome: item?.nome,
+                statusOriginal,
+                statusNormalizado,
+                prestadorId:
+                  item?.prestadorId ??
+                  item?.prestador?.id ??
+                  "sem prestadorId no objeto",
+              }),
+            );
 
             return statusNormalizado === "ATIVO" || statusOriginal === true;
           })
         : null;
 
-      console.log("[HOME] servicoAtivo encontrado:", servicoAtivo);
+      console.log(
+        "[HOME] servicoAtivo encontrado:",
+        sanitizeDeep(servicoAtivo),
+      );
 
       setServico(servicoAtivo || null);
     } catch (error: any) {
-      console.log("[HOME] Erro ao carregar card da home:", error);
+      console.log(
+        "[HOME] Erro ao carregar card da home:",
+        sanitizeError(error),
+      );
       console.log("[HOME] error.response?.status:", error?.response?.status);
-      console.log("[HOME] error.response?.data:", error?.response?.data);
+      console.log(
+        "[HOME] error.response?.data:",
+        sanitizeDeep(error?.response?.data),
+      );
 
       setPrestador(null);
       setServico(null);
@@ -175,8 +222,8 @@ export default function Landing() {
 
       const lista = await getFeedbacksFiltrados(prestador.id, tipo);
       setFeedbacks(lista);
-    } catch (error) {
-      console.log("Erro ao carregar feedbacks:", error);
+    } catch (error: any) {
+      console.log("Erro ao carregar feedbacks:", sanitizeError(error));
       setFeedbacks([]);
     } finally {
       setFeedbackLoading(false);
@@ -189,6 +236,7 @@ export default function Landing() {
         <Header>
           <Text style={typography.title}>Home</Text>
         </Header>
+
         {loadingCard ? (
           <View style={styles.loaderBox}>
             <ActivityIndicator size="large" color="#F05221" />
@@ -303,6 +351,7 @@ export default function Landing() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -372,7 +421,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginTop: 12,
     fontSize: 25,
-    fontWeight: 500,
+    fontWeight: "500",
     fontFamily: "Poppins_700Bold",
     color: "#111",
   },

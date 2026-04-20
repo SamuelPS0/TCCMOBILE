@@ -71,12 +71,12 @@ globalapi.interceptors.response.use(
     console.log("==== RESPONSE ERROR ====");
     console.log("URL:", error?.config?.url);
     console.log("STATUS:", error?.response?.status);
-    console.log("DATA:", error?.response?.data);
+    console.log("DATA:", sanitizeForLog(error?.response?.data));
     console.log("FULL ERROR:", error);
 
     return Promise.reject(error);
   },
 );
 
-export { globalapi };
+export { globalapi, sanitizeForLog };
 
