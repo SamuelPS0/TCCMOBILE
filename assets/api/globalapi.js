@@ -12,6 +12,32 @@ const globalapi = axios.create({
   },
 });
 
+function sanitizeForLog(value) {
+  if (value == null) return value;
+
+  if (typeof value === "string") {
+    const isBase64Like =
+      value.startsWith("data:image/") ||
+      value.startsWith("/9j/") ||
+      value.startsWith("iVBOR") ||
+      value.length > 30;
+
+    return isBase64Like ? "[imagem64]" : value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeForLog(item));
+  }
+
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, sanitizeForLog(item)]),
+    );
+  }
+
+  return value;
+}
+
 // =========================
 // LOG DE REQUEST
 // =========================
@@ -20,7 +46,7 @@ globalapi.interceptors.request.use(
     console.log("==== REQUEST ====");
     console.log("URL:", config.baseURL + config.url);
     console.log("METHOD:", config.method);
-    console.log("DATA:", config.data);
+    console.log("DATA:", sanitizeForLog(config.data));
     console.log("HEADERS:", config.headers);
     return config;
   },
@@ -38,7 +64,7 @@ globalapi.interceptors.response.use(
     console.log("==== RESPONSE ====");
     console.log("URL:", response.config.url);
     console.log("STATUS:", response.status);
-    console.log("DATA:", response.data);
+    console.log("DATA:", sanitizeForLog(response.data));
     return response;
   },
   (error) => {

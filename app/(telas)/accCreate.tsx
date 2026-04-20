@@ -178,6 +178,12 @@ export default function AccCreate() {
     if (erro) return alert(erro);
 
     const cpfFinal = (cpf || cpfPersistido || "").replace(/\D/g, "");
+    const contatosParaEnviar = [...contatos];
+
+    // Se usuário digitou contato e não clicou em "Adicionar", inclui automaticamente no submit.
+    if (tipoSelecionado && valorContato) {
+      contatosParaEnviar.push({ tipo: tipoSelecionado, valor: valorContato });
+    }
 
     try {
       setLoading(true);
@@ -250,16 +256,31 @@ export default function AccCreate() {
 
       await globalapi.post("servico", servicoPayload);
 
-      if (contatos.length > 0) {
+      if (contatosParaEnviar.length > 0) {
         await Promise.all(
-          contatos.map((contato) =>
-            globalapi.post("contato", {
+          contatosParaEnviar.map(async (contato) => {
+            const contatoPayload = {
               prestadorId,
               tipoContato: contato.tipo,
               link: contato.valor,
               statusContato: "ATIVO",
-            }),
-          ),
+            };
+
+            console.log("DEBUG CONTATO -> endpoint:", "contato");
+            console.log("DEBUG CONTATO -> payload:", contatoPayload);
+
+            try {
+              await globalapi.post("contato", contatoPayload);
+            } catch (errorContato: any) {
+              // fallback para backend com endpoint capitalizado
+              if (errorContato?.response?.status === 404) {
+                console.log("DEBUG CONTATO -> fallback endpoint:", "Contato");
+                await globalapi.post("Contato", contatoPayload);
+              } else {
+                throw errorContato;
+              }
+            }
+          }),
         );
       }
 
