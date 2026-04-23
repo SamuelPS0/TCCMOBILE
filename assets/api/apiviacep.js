@@ -8,24 +8,28 @@ export const buscarCep = async (cep) => {
   }
 
   try {
-    const response = await axios.get(
+    const { data } = await axios.post(
       `https://viacep.com.br/ws/${cepLimpo}/json/`,
-      {
-        timeout: 8000,
-      },
+      { timeout: 8000 }
     );
 
-    if (response.data.erro) {
+    if (data.erro) {
       throw new Error("CEP_NAO_ENCONTRADO");
     }
 
-    return response.data;
+    return {
+      cep: data.cep,
+      logradouro: data.logradouro,
+      bairro: data.bairro,
+      cidade: data.localidade,
+      uf: data.uf,
+    };
   } catch (error) {
-    if (error?.code === "ECONNABORTED") {
+    if (error.code === "ECONNABORTED") {
       throw new Error("CEP_TIMEOUT");
     }
 
-    if (error?.response?.status) {
+    if (error.response) {
       throw new Error(`CEP_HTTP_${error.response.status}`);
     }
 
