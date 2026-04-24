@@ -91,42 +91,53 @@ export default function AccCreate() {
     return cep.replace(/^(\d{5})(\d)/, "$1-$2");
   }
 
-async function handleCepChange(text: string) {
-  const cepLimpo = text.replace(/\D/g, "");
-  setCep(cepLimpo);
+  async function handleCepChange(text: string) {
+    const cepLimpo = text.replace(/\D/g, "");
+    setCep(cepLimpo);
 
-  if (cepLimpo.length !== 8) return;
+    if (cepLimpo.length !== 8) return;
 
-  try {
-    setLoadingCep(true);
-    setErroCep("");
+    try {
+      setLoadingCep(true);
+      setErroCep("");
 
-    const data = await buscarCep(cepLimpo);
+      const data = await buscarCep(cepLimpo);
 
-    setEstado(data.uf || "");
-    setMunicipio(data.cidade || "");
-    setLogradouro(data.logradouro || "");
-    setBairro(data.bairro || "");
-  } catch (error: any) {
-    const cepError = error?.message || "CEP_REDE_FALHOU";
+      if (data.erro) {
+        setErroCep("CEP inválido");
+        return;
+      }
 
-    if (cepError === "CEP_NAO_ENCONTRADO") {
-      setErroCep("CEP não encontrado");
-    } else if (cepError === "CEP_TIMEOUT") {
-      setErroCep("Tempo esgotado ao consultar CEP");
-    } else if (cepError.startsWith("CEP_HTTP_")) {
-      setErroCep(
-        `Falha no serviço de CEP (${cepError.replace("CEP_HTTP_", "HTTP ")})`
-      );
-    } else if (cepError === "CEP_REDE_FALHOU") {
-      setErroCep("Falha de rede ao consultar CEP");
-    } else {
-      setErroCep("Erro ao buscar CEP");
+      setEstado(data.uf || "");
+      setMunicipio(data.localidade || "");
+      setLogradouro(data.logradouro || "");
+      setBairro(data.bairro || "");
+    } catch (error: any) {
+      const cepError = error?.message || "CEP_REDE_FALHOU";
+
+      if (cepError === "CEP_NAO_ENCONTRADO") {
+        setErroCep("CEP não encontrado");
+      } else if (cepError === "CEP_TIMEOUT") {
+        setErroCep("Tempo esgotado ao consultar CEP");
+      } else if (cepError.startsWith("CEP_HTTP_")) {
+        setErroCep(
+          `Falha no serviço de CEP (${cepError.replace("CEP_HTTP_", "HTTP ")})`,
+        );
+      } else if (cepError === "CEP_REDE_FALHOU") {
+        setErroCep("Falha de rede ao consultar CEP");
+      } else {
+        setErroCep("Erro ao buscar CEP");
+      }
+
+      debugAlert("DEBUG - Falha consulta CEP", {
+        cepDigitado: cepLimpo,
+        errorCode: cepError,
+        hint: "Se aparecer HTTP 403/407 ou rede, pode ser firewall/proxy bloqueando viacep.com.br",
+      });
+    } finally {
+      setLoadingCep(false);
     }
-  } finally {
-    setLoadingCep(false);
   }
-}
 
   // =========================
   // CONTATOS
