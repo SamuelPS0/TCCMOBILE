@@ -9,6 +9,7 @@ import {
   Modal,
   Pressable,
   StyleSheet,
+  ScrollView,
   Text,
   View,
 } from "react-native";
@@ -233,14 +234,21 @@ export default function Landing() {
   }
 
   return (
-    <View style={styles.container}>
-      <ImageBackground source={Bg} style={styles.background}>
+  <ScrollView
+  style={styles.container}
+  contentContainerStyle={styles.scrollContent}
+>
+      <ImageBackground
+  source={Bg}
+  style={styles.background}
+  imageStyle={{ resizeMode: "cover" }}
+>
         <Header>
           <Text style={typography.title}>Home</Text>
         </Header>
 
         {loadingCard ? (
-          <View style={styles.loaderBox}>
+          <ScrollView style={styles.loaderBox}>
             <ActivityIndicator
               size="large"
               color="#FFFFFF" // Mudamos para branco para combinar com o texto
@@ -354,7 +362,7 @@ export default function Landing() {
           </View>
         </View>
       </Modal>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -363,11 +371,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+
+  scrollContent: {
+  flexGrow: 1,
+  paddingBottom: 40,
+},
+
   headerarea: {
     boxShadow: "0px 1px 6px rgba(0, 0, 0, 0.25)",
   },
   background: {
-    flex: 1,
+    minHeight: "100%",
   },
   loaderBox: {
     // Isso garante que ele ocupe a tela toda e centralize o conteúdo
