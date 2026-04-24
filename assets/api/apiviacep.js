@@ -16,19 +16,32 @@ export const buscarCep = async (cep) => {
     );
 
     if (response.data.erro) {
-      throw new Error("CEP_NAO_ENCONTRADO");
+            const notFoundError = new Error("CEP_NAO_ENCONTRADO");
+      notFoundError.code = "CEP_NAO_ENCONTRADO";
+      throw notFoundError;
     }
 
     return response.data;
   } catch (error) {
-    if (error?.code === "ECONNABORTED") {
-      throw new Error("CEP_TIMEOUT");
-    }
+    const status = error?.response?.status;
+    const apiMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.erro ||
+      error?.message ||
+      "Erro desconhecido ao consultar ViaCEP";
 
-    if (error?.response?.status) {
-      throw new Error(`CEP_HTTP_${error.response.status}`);
-    }
+     const normalizedCode =
+      error?.code === "ECONNABORTED"
+        ? "CEP_TIMEOUT"
+        : status
+          ? `CEP_HTTP_${status}`
+          : error?.code || "CEP_REDE_FALHOU";
 
-    throw new Error("CEP_REDE_FALHOU");
+    const wrappedError = new Error(`${normalizedCode}: ${apiMessage}`);
+    wrappedError.code = normalizedCode;
+    wrappedError.status = status;
+    wrappedError.originalError = error;
+
+     throw wrappedError;
   }
 };

@@ -113,27 +113,25 @@ export default function AccCreate() {
       setLogradouro(data.logradouro || "");
       setBairro(data.bairro || "");
     } catch (error: any) {
-      const cepError = error?.message || "CEP_REDE_FALHOU";
+      const errorCode = error?.code || "CEP_REDE_FALHOU";
+      const errorMessage =
+        error?.message ||
+        error?.response?.data?.message ||
+        "Erro desconhecido ao consultar ViaCEP";
+      const errorDetails = `Código: ${errorCode}
+Mensagem: ${errorMessage}`;
 
-      if (cepError === "CEP_NAO_ENCONTRADO") {
-        setErroCep("CEP não encontrado");
-      } else if (cepError === "CEP_TIMEOUT") {
-        setErroCep("Tempo esgotado ao consultar CEP");
-      } else if (cepError.startsWith("CEP_HTTP_")) {
-        setErroCep(
-          `Falha no serviço de CEP (${cepError.replace("CEP_HTTP_", "HTTP ")})`,
-        );
-      } else if (cepError === "CEP_REDE_FALHOU") {
-        setErroCep("Falha de rede ao consultar CEP");
-      } else {
-        setErroCep("Erro ao buscar CEP");
-      }
-
-      debugAlert("DEBUG - Falha consulta CEP", {
-        cepDigitado: cepLimpo,
-        errorCode: cepError,
-        hint: "Se aparecer HTTP 403/407 ou rede, pode ser firewall/proxy bloqueando viacep.com.br",
+      setErroCep(errorMessage);
+      Alert.alert("Erro na consulta de CEP", errorDetails);
+      console.error("[ViaCEP] Falha na consulta de CEP", {
+        cepDigitado:cepLimpo,
+        code: errorCode,
+        message: errorMessage,
+        status: error?.status || error?.response?.status,
+        responseData: error?.response?.data,
+        originalError: error?.originalError || error,
       });
+
     } finally {
       setLoadingCep(false);
     }
