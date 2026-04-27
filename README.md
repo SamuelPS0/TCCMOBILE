@@ -1,50 +1,233 @@
-# Welcome to your Expo app 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# DivulgAí Mobile (divulgaimobile)
 
-## Get started
+## Descrição
+Aplicativo mobile desenvolvido com **Expo** e **React Native** para fluxo de cadastro, login e criação/edição de perfil de prestador de serviços.  
+O projeto contém telas de autenticação, tela inicial com card de serviço e área de perfil do usuário.
 
-1. Install dependencies
+O sistema faz parte do projeto **DivulgAí**, uma plataforma digital voltada à divulgação de prestadores de serviços do ramo alimentício, conectando consumidores a profissionais autônomos de forma simples e acessível.
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## Contexto do Projeto
+O projeto surgiu a partir da dificuldade de prestadores de serviços alimentícios em divulgar seus produtos e alcançar clientes, principalmente devido à baixa presença digital e dependência de redes sociais e indicações informais.
 
-   ```bash
-   npx expo start
-   ```
+Além disso, consumidores enfrentam dificuldades para encontrar opções confiáveis e organizadas de serviços locais. O Divulgaí propõe centralizar essas informações em uma plataforma única, facilitando o contato direto entre as partes e incentivando o comércio local.
 
-In the output, you'll find options to open the app in a
+---
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Objetivo
+Permitir que um usuário:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- realize cadastro e login;
+- crie um perfil profissional;
+- visualize informações do seu serviço;
+- edite dados pessoais e profissionais no aplicativo.
 
-## Get a fresh project
+Além disso, o sistema busca:
 
-When you're ready, run:
+- aumentar a visibilidade de prestadores autônomos;
+- facilitar a descoberta de serviços alimentícios locais;
+- promover inclusão digital e crescimento econômico regional.
 
+---
+
+## Funcionalidades
+
+### Funcionalidades do aplicativo mobile
+- Cadastro de usuário com:
+  - nome, telefone, CPF, e-mail, senha, data de nascimento, gênero e estado;
+  - perguntas de segurança;
+  - aceite de termos.
+- Login com e-mail e senha.
+- Criação de perfil profissional com:
+  - foto de perfil;
+  - nome e descrição;
+  - CEP e preenchimento de endereço;
+  - categoria;
+  - contatos (WhatsApp, Instagram, Facebook);
+  - imagem do serviço/evento.
+- Tela Home com:
+  - card para criar perfil quando não existe serviço ativo;
+  - exibição de informações do serviço quando existente;
+  - modal de feedbacks e ocorrências.
+- Edição de:
+  - informações pessoais;
+  - informações de prestador.
+- Logout.
+- Persistência local de sessão e dados pendentes de onboarding.
+
+### Funcionalidades complementares do sistema geral
+- Busca de prestadores por categoria e localização (Web);
+- Visualização de perfis com descrição, imagens e contatos;
+- Envio de feedbacks e avaliações;
+- Registro de ocorrências/denúncias;
+- Aprovação de perfis por administrador antes da publicação.
+
+---
+
+## Metodologia
+O projeto foi desenvolvido por equipe acadêmica utilizando organização baseada em papéis (Scrum), incluindo Product Owner, Scrum Master e equipe de desenvolvimento.
+
+---
+
+## Como Executar / Utilizar
+
+### Pré-requisitos
+- Node.js e npm instalados ([informação não fornecida sobre versão mínima]).
+- Ambiente Expo configurado ([informação não fornecida sobre versão mínima]).
+
+### 1) Instalar dependências
 ```bash
-npm run reset-project
-```
+npm install
+2) Executar o projeto
+npx expo start
+3) Scripts disponíveis
+npm run start
+4) Configuração de API (ambiente local)
+A URL base da API está definida em:
+assets/api/globalapi.js
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Valor atual:
+http://10.0.2.2:8080/api/v1/
 
-## Learn more
+Estrutura do Projeto
+app/
+  (auth)/
+    index.tsx
+    cadastro.tsx
+    login.tsx
+    seguranca.tsx
+  (tabs)/
+    _layout.tsx
+    index.tsx
+    perfil.tsx
+  (telas)/
+    _layout.tsx
+    accCreate.tsx
+    personalinfo.tsx
+    workinfo.tsx
+  _layout.tsx
+  index.js
 
-To learn more about developing your project with Expo, look at the following resources:
+assets/
+  api/
+    globalapi.js
+    apiviacep.js
+    ibge.js
+  components/
+    Button.tsx
+    CheckboxInput.tsx
+    DateInput.tsx
+    Header.tsx
+    ImageUpload.tsx
+    Input.tsx
+    ProfilePhoto.tsx
+    SelectInput.tsx
+    BottomNav.tsx
+  globalstyles/
+    fonts.js
+  images/
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+src/
+  context/
+    AuthContext.js
+  services/
+    authService.js
+    prestadorService.js
+    feedbackService.js
+  storage/
+    onboardingStorage.js
+  utils/
+    formatFeedbackText.ts
+Regras de Negócio (Resumo)
+Usuários devem ser autenticados com e-mail e senha.
 
-## Join the community
+Prestadores só podem exibir perfil após cadastro completo.
 
-Join our community of developers creating universal apps.
+Perfis precisam ser validados por um administrador antes de ficarem públicos.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Não é permitido cadastro duplicado com mesmo CPF ou e-mail.
+
+Perfis inativos ou incompletos não são exibidos aos consumidores.
+
+Tecnologias (Projeto Geral)
+Front-end Mobile: React Native / Expo (implementação atual)
+
+Front-end Web: React.js
+
+Back-end: Java (IntelliJ)
+
+Banco de Dados: SQL Server
+
+Autenticação: Firebase
+
+Hospedagem Web: Vercel
+
+Estrutura de Dados (Resumo)
+Entidades principais do sistema:
+
+Usuário
+
+Prestador
+
+Serviço
+
+Categoria
+
+Contato
+
+Feedback
+
+Essas entidades permitem o relacionamento entre usuários, serviços oferecidos e interações (feedbacks e ocorrências).
+
+Interface e Navegação (Resumo)
+O aplicativo mobile inclui:
+
+Tela inicial com opções de cadastro e login;
+
+Tela de cadastro com dados pessoais e perguntas de segurança;
+
+Tela de criação de perfil com upload de imagens e dados do serviço;
+
+Tela Home com card do serviço;
+
+Área "Minha conta" para gerenciamento de dados;
+
+Telas de edição de perfil e informações pessoais.
+
+Limitações Conhecidas
+Dependência de validação manual por administrador para publicação de perfis;
+
+Usuários com baixo conhecimento tecnológico podem ter dificuldade inicial de uso;
+
+Parte das funcionalidades completas depende da integração com o sistema web;
+
+Algumas informações de execução detalhada e infraestrutura não foram fornecidas.
+
+Melhorias Futuras
+Implementação completa de integração com backend e banco de dados;
+
+Automatização parcial da validação de prestadores;
+
+Melhorias na usabilidade para usuários com pouca familiaridade digital;
+
+Expansão de funcionalidades de busca e filtros;
+
+Inclusão de métricas mais detalhadas para prestadores (engajamento e alcance);
+
+Otimização para diferentes dispositivos e acessibilidade.
+
+Justificativa
+O projeto atende à necessidade de digitalização de pequenos empreendedores do ramo alimentício, oferecendo uma solução acessível para divulgação de serviços e conexão com clientes.
+
+A proposta contribui para:
+
+fortalecimento da economia local;
+
+aumento da visibilidade de autônomos;
+
+incentivo ao consumo regional;
+
+inclusão digital de pequenos negócios.
+
