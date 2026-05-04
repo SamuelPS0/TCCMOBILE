@@ -1,7 +1,13 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { KeyboardTypeOptions, StyleSheet, Text, TextInput, View } from "react-native";
-import { typography } from "../globalstyles/fonts";
 import React from "react";
+import {
+  KeyboardTypeOptions,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { typography } from "../globalstyles/fonts";
 
 interface IInputProps {
   label?: string;
@@ -16,6 +22,9 @@ interface IInputProps {
   secureTextEntry?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   editable?: boolean;
+
+  // NOVO
+  error?: string;
 }
 
 export const Input = ({
@@ -31,29 +40,35 @@ export const Input = ({
   secureTextEntry,
   autoCapitalize,
   editable = true,
+  error,
 }: IInputProps) => {
   return (
     <View style={[styles.container, { width }]}>
       {(label || icon) && (
         <View style={styles.labelRow}>
           {icon && <Ionicons name={icon} size={18} color="#666" />}
-
           {label && <Text style={typography.inputlabel}>{label}</Text>}
         </View>
       )}
 
-<TextInput
-  style={[styles.input, multiline && styles.textarea]}
-  placeholder={placeholder}
-  placeholderTextColor={placeholderColor}
-  value={value}
-  onChangeText={onChangeText}
-  multiline={multiline}
-  keyboardType={keyboardType}
-  secureTextEntry={secureTextEntry}
-  autoCapitalize={autoCapitalize}
-  editable={editable}
-/>
+      <TextInput
+        style={[
+          styles.input,
+          multiline && styles.textarea,
+          error && styles.inputError,
+        ]}
+        placeholder={placeholder}
+        placeholderTextColor={placeholderColor}
+        value={value}
+        onChangeText={onChangeText}
+        multiline={multiline}
+        keyboardType={keyboardType}
+        secureTextEntry={secureTextEntry}
+        autoCapitalize={autoCapitalize}
+        editable={editable}
+      />
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
@@ -81,9 +96,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
+  inputError: {
+    borderColor: "red",
+  },
+
   textarea: {
     height: 160,
     textAlignVertical: "top",
     paddingTop: 10,
+  },
+
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
   },
 });

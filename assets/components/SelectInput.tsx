@@ -1,8 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Picker } from "@react-native-picker/picker";
+import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { typography } from "../globalstyles/fonts";
-import React from "react";
 
 interface ISelectProps {
   label?: string;
@@ -12,6 +12,9 @@ interface ISelectProps {
   options: { label: string; value: string }[];
   width?: number | string;
   enabled?: boolean;
+
+  // NOVO
+  error?: string;
 }
 
 export const SelectInput = ({
@@ -21,7 +24,8 @@ export const SelectInput = ({
   onValueChange,
   options,
   width = "100%",
-   enabled = true,
+  enabled = true,
+  error,
 }: ISelectProps) => {
   return (
     <View style={[styles.container, { width }]}>
@@ -32,18 +36,20 @@ export const SelectInput = ({
         </View>
       )}
 
-      <View style={styles.select}>
+      <View style={[styles.select, error && styles.selectError]}>
         <Picker
           selectedValue={selectedValue}
           onValueChange={onValueChange}
           style={styles.picker}
-            enabled={enabled}
+          enabled={enabled}
         >
           {options.map((opt) => (
             <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
           ))}
         </Picker>
       </View>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
@@ -71,8 +77,18 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
+  selectError: {
+    borderColor: "red",
+  },
+
   picker: {
     width: "100%",
     height: 50,
+  },
+
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
   },
 });

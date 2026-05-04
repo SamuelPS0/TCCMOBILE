@@ -205,7 +205,7 @@ Mensagem: ${errorMessage}`;
   // =========================
   const handleSubmit = async () => {
     const erro = validar();
-    if (erro) return alert(erro);
+if (erro) return;
 
     const cpfFinal = (cpf || cpfPersistido || "").replace(/\D/g, "");
     const contatosParaEnviar = [...contatos];
@@ -486,64 +486,62 @@ Mensagem: ${errorMessage}`;
             />
           </View>
 
-          <Input label="Nome*" value={nome} onChangeText={setNome} />
-          {fieldErrors.nome && (
-            <Text style={styles.errorText}>{fieldErrors.nome}</Text>
-          )}
+<Input
+  label="Nome*"
+  value={nome}
+  onChangeText={(text) => {
+    setNome(text);
+    setFieldErrors((prev) => ({ ...prev, nome: "" }));
+  }}
+  error={fieldErrors.nome}
+/>
 
-          <Input
-            label="Descrição*"
-            multiline
-            value={descricao}
-            onChangeText={setDescricao}
-          />
-          {fieldErrors.descricao && (
-            <Text style={styles.errorText}>{fieldErrors.descricao}</Text>
-          )}
+<Input
+  label="Descrição*"
+  multiline
+  value={descricao}
+  onChangeText={(text) => {
+    setDescricao(text);
+    setFieldErrors((prev) => ({ ...prev, descricao: "" }));
+  }}
+  error={fieldErrors.descricao}
+/>
 
 
-          <Input
-            label="CEP*"
-            value={formatCep(cep)}
-            onChangeText={handleCepChange}
-          />
-          {fieldErrors.cep && (
-            <Text style={styles.errorText}>{fieldErrors.cep}</Text>
-          )}
+<Input
+  label="CEP*"
+  value={formatCep(cep)}
+  onChangeText={(text) => {
+    handleCepChange(text);
+    setFieldErrors((prev) => ({ ...prev, cep: "" }));
+  }}
+  error={fieldErrors.cep}
+/>
 
           {loadingCep && <Text>Buscando CEP...</Text>}
           {erroCep && <Text style={{ color: "red" }}>{erroCep}</Text>}
 
           <View style={styles.rowInputs}>
-            <SelectInput
-              label="Estado*"
-              selectedValue={estado}
-               onValueChange={() => {}}
-              options={[
-                { label: "SP - São Paulo", value: "SP" },
-                { label: "RJ - Rio de Janeiro", value: "RJ" },
-                { label: "MG - Minas Gerais", value: "MG" },
-                { label: "PR - Paraná", value: "PR" },
-              ]}
-              width={"31%"}
-               enabled={false}
-            />
+<SelectInput
+  label="Estado*"
+  selectedValue={estado}
+  onValueChange={() => {}}
+  options={[...]}
+  width={"31%"}
+  enabled={false}
+  error={fieldErrors.estado}
+/>
 
             <View style={styles.municipioContainer}>
-               <Input
-                label="Município*"
-                value={municipio}
-                onChangeText={() => {}}
-                editable={false}
-              />
+<Input
+  label="Município*"
+  value={municipio}
+  onChangeText={() => {}}
+  editable={false}
+  error={fieldErrors.municipio}
+/>
             </View>
           </View>
-          {fieldErrors.estado && (
-            <Text style={styles.errorText}>{fieldErrors.estado}</Text>
-          )}
-          {fieldErrors.municipio && (
-            <Text style={styles.errorText}>{fieldErrors.municipio}</Text>
-          )}
 
           <Input
             label="Logradouro*"
@@ -615,18 +613,17 @@ Mensagem: ${errorMessage}`;
             ))}
           </View>
 
-          <SelectInput
-              label="Categoria*"
-              selectedValue={categoria}
-              onValueChange={setCategoria}
-              options={categoriasApi}
-            />
-            {fieldErrors.categoria && (
-              <Text style={styles.errorText}>{fieldErrors.categoria}</Text>
-            )}
-            {fieldErrors.contato && (
-              <Text style={styles.errorText}>{fieldErrors.contato}</Text>
-            )}
+<SelectInput
+  label="Categoria*"
+  selectedValue={categoria}
+  onValueChange={(value) => {
+    setCategoria(value);
+    setFieldErrors((prev) => ({ ...prev, categoria: "" }));
+  }}
+  options={categoriasApi}
+  error={fieldErrors.categoria}
+/>
+
 
           <ImageUpload
             label="Exemplo de serviço*"
