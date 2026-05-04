@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Picker } from "@react-native-picker/picker";
 import { StyleSheet, Text, View } from "react-native";
 import { typography } from "../globalstyles/fonts";
+import React from "react";
 
 interface ISelectProps {
   label?: string;
@@ -10,6 +11,7 @@ interface ISelectProps {
   onValueChange: (value: string) => void;
   options: { label: string; value: string }[];
   width?: number | string;
+  enabled?: boolean;
 }
 
 export const SelectInput = ({
@@ -19,6 +21,7 @@ export const SelectInput = ({
   onValueChange,
   options,
   width = "100%",
+   enabled = true,
 }: ISelectProps) => {
   return (
     <View style={[styles.container, { width }]}>
@@ -34,6 +37,7 @@ export const SelectInput = ({
           selectedValue={selectedValue}
           onValueChange={onValueChange}
           style={styles.picker}
+            enabled={enabled}
         >
           {options.map((opt) => (
             <Picker.Item key={opt.value} label={opt.label} value={opt.value} />

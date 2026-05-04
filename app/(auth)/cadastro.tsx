@@ -9,6 +9,7 @@ import { Header } from "../../assets/components/Header";
 import { Input } from "../../assets/components/Input";
 import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
+import React from "react";
 
 // ================== MÁSCARAS ==================
 function onlyDigits(value: string) {
@@ -236,6 +237,8 @@ export default function Cadastro() {
             options={estados}
           />
 
+
+
           <View style={styles.buttonarea}>
             <Button onPress={handleSubmit}>
               <Text style={typography.buttonText}>Continuar</Text>
@@ -274,8 +277,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+   privacyLink: {
+    color: "#007AFF",
+    textDecorationLine: "underline",
+    marginTop: 8,
+    textAlign: "center",
+  },
 
   buttonarea: {
     marginTop: 20,
   },
 });
+
+//          <Pressable onPress={() => router.push("/(auth)/politica-privacidade")}>
+//            <Text style={styles.privacyLink}>Ler Política de Privacidade</Text>
+//          </Pressable>

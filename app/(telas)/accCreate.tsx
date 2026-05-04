@@ -25,6 +25,7 @@ import {
   clearPendingPrestadorProfile,
   getPendingPrestadorProfile,
 } from "../../src/storage/onboardingStorage";
+import React from "react";
 
 export default function AccCreate() {
   const router = useRouter();
@@ -62,6 +63,8 @@ export default function AccCreate() {
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   const [erroCep, setErroCep] = useState("");
+
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   function debugAlert(title: string, details: Record<string, any>) {
     const formatValue = (value: any) => {
@@ -160,12 +163,41 @@ Mensagem: ${errorMessage}`;
   // VALIDACAO
   // =========================
   function validar() {
+     const errors: Record<string, string> = {};
     const uid = Number(userId);
     if (!uid) return "User inválido";
-    if (!nome) return "Nome obrigatório";
-    if (!categoria) return "Categoria obrigatória";
+     if (!nome.trim()) {
+      errors.nome = "O campo nome deve ser preenchido obrigatoriamente";
+    }
+    if (!descricao.trim()) {
+      errors.descricao = "O campo descrição deve ser preenchido obrigatoriamente";
+    }
+    if (!cep || cep.length !== 8) {
+      errors.cep = "O campo CEP deve ser preenchido obrigatoriamente";
+    }
+    if (!estado) {
+      errors.estado = "O campo estado deve ser preenchido obrigatoriamente";
+    }
+    if (!municipio) {
+      errors.municipio =
+        "O campo município deve ser preenchido obrigatoriamente";
+    }
+    if (!categoria) {
+      errors.categoria =
+        "O campo categoria deve ser preenchido obrigatoriamente";
+    }
+    const contatosParaValidar = [...contatos];
+    if (tipoSelecionado && valorContato) {
+      contatosParaValidar.push({ tipo: tipoSelecionado, valor: valorContato });
+    }
+    if (contatosParaValidar.length === 0) {
+      errors.contato = "O campo contato deve ser preenchido obrigatoriamente";
+    }
 
-    return null;
+     setFieldErrors(errors);
+    return Object.keys(errors).length > 0
+      ? "Preencha os campos obrigatórios."
+      : null;
   }
 
   // =========================
@@ -454,29 +486,39 @@ Mensagem: ${errorMessage}`;
             />
           </View>
 
-          <Input label="Nome" value={nome} onChangeText={setNome} />
+          <Input label="Nome*" value={nome} onChangeText={setNome} />
+          {fieldErrors.nome && (
+            <Text style={styles.errorText}>{fieldErrors.nome}</Text>
+          )}
 
           <Input
-            label="Descrição"
+            label="Descrição*"
             multiline
             value={descricao}
             onChangeText={setDescricao}
           />
+          {fieldErrors.descricao && (
+            <Text style={styles.errorText}>{fieldErrors.descricao}</Text>
+          )}
+
 
           <Input
-            label="CEP"
+            label="CEP*"
             value={formatCep(cep)}
             onChangeText={handleCepChange}
           />
+          {fieldErrors.cep && (
+            <Text style={styles.errorText}>{fieldErrors.cep}</Text>
+          )}
 
           {loadingCep && <Text>Buscando CEP...</Text>}
           {erroCep && <Text style={{ color: "red" }}>{erroCep}</Text>}
 
           <View style={styles.rowInputs}>
             <SelectInput
-              label="Estado"
+              label="Estado*"
               selectedValue={estado}
-              onValueChange={setEstado}
+               onValueChange={() => {}}
               options={[
                 { label: "SP - São Paulo", value: "SP" },
                 { label: "RJ - Rio de Janeiro", value: "RJ" },
@@ -484,29 +526,41 @@ Mensagem: ${errorMessage}`;
                 { label: "PR - Paraná", value: "PR" },
               ]}
               width={"31%"}
+               enabled={false}
             />
 
             <View style={styles.municipioContainer}>
-              <Input label=" " value={municipio} onChangeText={setMunicipio} />
+               <Input
+                label="Município*"
+                value={municipio}
+                onChangeText={() => {}}
+                editable={false}
+              />
             </View>
           </View>
+          {fieldErrors.estado && (
+            <Text style={styles.errorText}>{fieldErrors.estado}</Text>
+          )}
+          {fieldErrors.municipio && (
+            <Text style={styles.errorText}>{fieldErrors.municipio}</Text>
+          )}
 
           <Input
-            label="Logradouro"
+            label="Logradouro*"
             value={logradouro}
             onChangeText={setLogradouro}
           />
-          <Input label="Bairro" value={bairro} onChangeText={setBairro} />
+          <Input label="Bairro*" value={bairro} onChangeText={setBairro} />
 
           <View style={styles.rowInputs}>
             <Input
-              label="Número"
+              label="Número*"
               value={numero}
               onChangeText={setNumero}
               width={"30%"}
             />
             <Input
-              label="Complemento"
+              label="Complemento*"
               value={complemento}
               onChangeText={setComplemento}
               width={"65%"}
@@ -518,7 +572,7 @@ Mensagem: ${errorMessage}`;
             {contatos.length < 5 && (
               <>
                 <SelectInput
-                  label="Adicionar contato"
+                  label="Adicionar contato*"
                   selectedValue={tipoSelecionado}
                   onValueChange={setTipoSelecionado}
                   options={[
@@ -562,14 +616,20 @@ Mensagem: ${errorMessage}`;
           </View>
 
           <SelectInput
-            label="Categoria"
-            selectedValue={categoria}
-            onValueChange={setCategoria}
-            options={categoriasApi}
-          />
+              label="Categoria*"
+              selectedValue={categoria}
+              onValueChange={setCategoria}
+              options={categoriasApi}
+            />
+            {fieldErrors.categoria && (
+              <Text style={styles.errorText}>{fieldErrors.categoria}</Text>
+            )}
+            {fieldErrors.contato && (
+              <Text style={styles.errorText}>{fieldErrors.contato}</Text>
+            )}
 
           <ImageUpload
-            label="Foto do evento"
+            label="Exemplo de serviço*"
             height={200}
             imageUri={eventImage?.uri || null}
             onChangeImage={setEventImage}
@@ -620,6 +680,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     marginTop: 8,
+  },
+
+   errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: -2,
+    marginBottom: 4,
   },
 
   addButtonText: {

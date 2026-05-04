@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { KeyboardTypeOptions, StyleSheet, Text, TextInput, View } from "react-native";
 import { typography } from "../globalstyles/fonts";
+import React from "react";
 
 interface IInputProps {
   label?: string;
@@ -14,6 +15,7 @@ interface IInputProps {
   keyboardType?: KeyboardTypeOptions;
   secureTextEntry?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  editable?: boolean;
 }
 
 export const Input = ({
@@ -28,6 +30,7 @@ export const Input = ({
   keyboardType,
   secureTextEntry,
   autoCapitalize,
+  editable = true,
 }: IInputProps) => {
   return (
     <View style={[styles.container, { width }]}>
@@ -49,6 +52,7 @@ export const Input = ({
   keyboardType={keyboardType}
   secureTextEntry={secureTextEntry}
   autoCapitalize={autoCapitalize}
+  editable={editable}
 />
     </View>
   );
