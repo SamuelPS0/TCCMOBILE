@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import React from "react";
+import { Platform } from "react-native";
 import { Button } from "../../assets/components/Button";
 import { DateInput } from "../../assets/components/DateInput";
 import { Header } from "../../assets/components/Header";
@@ -233,16 +234,39 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
           />
 
           <View style={styles.rowInputs}>
-            <DateInput
-              label="Data de nascimento*"
-              value={birthDate || new Date()}
-              onChange={(date: Date) => {
-                setBirthDate(date);
-                setFieldErrors((prev) => ({ ...prev, birthDate: "" }));
-              }}
-              width="48%"
-              error={fieldErrors.birthDate}
-            />
+            {Platform.OS === "web" ? (
+  <View style={{ width: "48%" }}>
+    <Text>Data de nascimento*</Text>
+    <input
+      type="date"
+      style={{
+        padding: 10,
+        borderRadius: 6,
+        border: "1px solid #ccc",
+        marginTop: 4,
+      }}
+      onChange={(e) => {
+        const date = new Date(e.target.value);
+        setBirthDate(date);
+        setFieldErrors((prev) => ({ ...prev, birthDate: "" }));
+      }}
+    />
+    {fieldErrors.birthDate && (
+      <Text style={{ color: "red" }}>{fieldErrors.birthDate}</Text>
+    )}
+  </View>
+) : (
+  <DateInput
+    label="Data de nascimento*"
+    value={birthDate || new Date()}
+    onChange={(date: Date) => {
+      setBirthDate(date);
+      setFieldErrors((prev) => ({ ...prev, birthDate: "" }));
+    }}
+    width="48%"
+    error={fieldErrors.birthDate}
+  />
+)}
 
             <SelectInput
               label="Gênero*"
