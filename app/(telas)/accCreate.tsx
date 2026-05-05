@@ -1,7 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +8,7 @@ import {
   View,
 } from "react-native";
 
+import React from "react";
 import { buscarCep } from "../../assets/api/apiviacep";
 import { globalapi, sanitizeForLog } from "../../assets/api/globalapi";
 import BottomNav from "../../assets/components/BottomNav";
@@ -25,7 +25,6 @@ import {
   clearPendingPrestadorProfile,
   getPendingPrestadorProfile,
 } from "../../src/storage/onboardingStorage";
-import React from "react";
 
 export default function AccCreate() {
   const router = useRouter();
@@ -66,25 +65,7 @@ export default function AccCreate() {
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  function debugAlert(title: string, details: Record<string, any>) {
-    const formatValue = (value: any) => {
-      if (value == null) return "null";
-      if (typeof value === "string") return value;
 
-      try {
-        return JSON.stringify(value, null, 2);
-      } catch {
-        return String(value);
-      }
-    };
-
-    const message = Object.entries(details)
-      .map(([key, value]) => `${key}: ${formatValue(value)}`)
-      .join("\n\n")
-      .slice(0, 3500);
-
-    Alert.alert(title, message || "Sem detalhes");
-  }
 
   // =========================
   // CEP
@@ -121,11 +102,8 @@ export default function AccCreate() {
         error?.message ||
         error?.response?.data?.message ||
         "Erro desconhecido ao consultar ViaCEP";
-      const errorDetails = `Código: ${errorCode}
-Mensagem: ${errorMessage}`;
 
       setErroCep(errorMessage);
-      Alert.alert("Erro na consulta de CEP", errorDetails);
       console.error("[ViaCEP] Falha na consulta de CEP", {
         cepDigitado:cepLimpo,
         code: errorCode,
@@ -229,17 +207,18 @@ if (erro) return;
       if (normalizedProfilePhotoBase64) {
         try {
           await updateUsuarioFoto(Number(userId), normalizedProfilePhotoBase64);
-        } catch (photoError: any) {
-          console.log("WARN FOTO USUARIO:", photoError?.message || photoError);
-          debugAlert("DEBUG - Falha ao enviar foto de perfil", {
-            endpointTentado: "/Usuario/{id}/foto | /usuario/{id}/foto",
-            userId: Number(userId),
-            status: photoError?.response?.status ?? "sem status",
-            url: photoError?.config?.url ?? "sem url",
-            message: photoError?.message ?? "sem mensagem",
-            responseData: photoError?.response?.data ?? "sem body",
-          });
-        }
+        }catch (photoError: any) {
+  console.log("WARN FOTO USUARIO:", photoError?.message || photoError);
+
+  console.error("[accCreate] Erro ao enviar foto do usuário", {
+    endpointTentado: "/Usuario/{id}/foto | /usuario/{id}/foto",
+    userId: Number(userId),
+    status: photoError?.response?.status ?? "sem status",
+    url: photoError?.config?.url ?? "sem url",
+    message: photoError?.message ?? "sem mensagem",
+    responseData: photoError?.response?.data ?? "sem body",
+  });
+}
       }
 
       const prestadorPayload = {
@@ -354,7 +333,7 @@ if (erro) return;
           .filter((item) => item.result.status === "rejected");
 
         if (falhasContato.length > 0) {
-          debugAlert("Alguns contatos não foram salvos", {
+          console.warn("[accCreate] Alguns contatos não foram salvos", {
             totalContatos: contatosParaEnviar.length,
             contatosComFalha: falhasContato.length,
             detalhes: falhasContato.map(({ result, index }) => ({
@@ -374,13 +353,12 @@ if (erro) return;
 
       console.log("=== SUCCESS ===");
 
-      alert("Perfil criado com sucesso!");
       router.replace("/(tabs)");
     } catch (error: any) {
       console.log("=== ERROR ===");
       console.log(error?.response?.data || error.message);
 
-      debugAlert("DEBUG - Erro no cadastro de perfil", {
+       console.error("[accCreate] DEBUG - Erro no cadastro de perfil", {
         status: error?.response?.status ?? "sem status",
         url: error?.config?.url ?? "sem url",
         message: error?.message ?? "sem mensagem",
@@ -526,7 +504,35 @@ if (erro) return;
   label="Estado*"
   selectedValue={estado}
   onValueChange={() => {}}
-  options={[...]}
+   options={[
+    { label: "Acre", value: "AC" },
+    { label: "Alagoas", value: "AL" },
+    { label: "Amapá", value: "AP" },
+    { label: "Amazonas", value: "AM" },
+    { label: "Bahia", value: "BA" },
+    { label: "Ceará", value: "CE" },
+    { label: "Distrito Federal", value: "DF" },
+    { label: "Espírito Santo", value: "ES" },
+    { label: "Goiás", value: "GO" },
+    { label: "Maranhão", value: "MA" },
+    { label: "Mato Grosso", value: "MT" },
+    { label: "Mato Grosso do Sul", value: "MS" },
+    { label: "Minas Gerais", value: "MG" },
+    { label: "Pará", value: "PA" },
+    { label: "Paraíba", value: "PB" },
+    { label: "Paraná", value: "PR" },
+    { label: "Pernambuco", value: "PE" },
+    { label: "Piauí", value: "PI" },
+    { label: "Rio de Janeiro", value: "RJ" },
+    { label: "Rio Grande do Norte", value: "RN" },
+    { label: "Rio Grande do Sul", value: "RS" },
+    { label: "Rondônia", value: "RO" },
+    { label: "Roraima", value: "RR" },
+    { label: "Santa Catarina", value: "SC" },
+    { label: "São Paulo", value: "SP" },
+    { label: "Sergipe", value: "SE" },
+    { label: "Tocantins", value: "TO" },
+  ]}
   width={"31%"}
   enabled={false}
   error={fieldErrors.estado}
@@ -609,8 +615,12 @@ if (erro) return;
                 <TouchableOpacity onPress={() => removerContato(index)}>
                   <Text style={styles.remover}>Remover</Text>
                 </TouchableOpacity>
+                
               </View>
             ))}
+             {!!fieldErrors.contato && (
+              <Text style={styles.errorText}>{fieldErrors.contato}</Text>
+            )}
           </View>
 
 <SelectInput

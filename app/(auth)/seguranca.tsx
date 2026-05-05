@@ -23,23 +23,36 @@ export default function Seguranca() {
   const [acceptTerms2, setAcceptTerms2] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   const handleContinue = async () => {
     if (loading) return;
 
-    if (!chave1.trim() || !chave2.trim()) {
-      Alert.alert("Atenção", "Preencha as perguntas de segurança.");
-      return;
+    const errors: Record<string, string> = {};
+
+    if (!chave1.trim()) {
+      errors.chave1 = "Campo obrigatório";
     }
 
-    if (!acceptTerms1 || !acceptTerms2) {
-      Alert.alert("Atenção", "Você precisa aceitar os termos para continuar.");
-      return;
+    if (!chave2.trim()) {
+      errors.chave2 = "Campo obrigatório";
     }
+
+    if (!acceptTerms1) {
+      errors.terms1 = "Você precisa aceitar os termos";
+    }
+
+    if (!acceptTerms2) {
+      errors.terms2 = "Você precisa aceitar os termos";
+    }
+
+    setFieldErrors(errors);
+
+    if (Object.keys(errors).length > 0) return;
 
     try {
       setLoading(true);
 
-      // ===== DADOS VINDOS DO CADASTRO =====
       const nome = String(params.nome ?? "");
       const email = String(params.email ?? "");
       const senha = String(params.senha ?? "");
@@ -48,16 +61,16 @@ export default function Seguranca() {
       const birthDate = String(params.birthDate ?? "");
       const rawGender = String(params.gender ?? "").toLowerCase();
       const estado = String(params.estado ?? "");
+
       const normalizedGender =
         rawGender === "m"
           ? "Masculino"
           : rawGender === "f"
-            ? "Feminino"
-            : rawGender === "o"
-              ? "Outro"
-              : "Não informado";
+          ? "Feminino"
+          : rawGender === "o"
+          ? "Outro"
+          : "Não informado";
 
-      // ===== PAYLOAD COMPLETO =====
       const payload = {
         nome,
         email,
@@ -68,8 +81,6 @@ export default function Seguranca() {
         ps_02: chave2,
       };
 
-      console.log("Payload enviado:", payload);
-
       const response = await globalapi.post("Usuario", payload);
 
       const userId = response?.data?.id;
@@ -78,7 +89,6 @@ export default function Seguranca() {
         throw new Error("ID do usuário não retornado");
       }
 
-      // ===== SALVA LOCAL =====
       await savePendingPrestadorProfile({
         userId: String(userId),
         cpf,
@@ -90,7 +100,6 @@ export default function Seguranca() {
         estado,
       });
 
-      // ===== LOGIN =====
       const userData = {
         id: userId,
         nome,
@@ -104,10 +113,6 @@ export default function Seguranca() {
 
       router.replace("/(tabs)");
     } catch (error: any) {
-      console.log("Erro completo:", error);
-      console.log("Response:", error?.response);
-      console.log("Data:", error?.response?.data);
-
       if (error.response?.status === 400) {
         Alert.alert("Erro", "Dados inválidos.");
       } else if (error.response?.status === 409) {
@@ -142,7 +147,11 @@ export default function Seguranca() {
           placeholder="Digite aqui..."
           width="90%"
           value={chave1}
-          onChangeText={setChave1}
+          onChangeText={(text) => {
+            setChave1(text);
+            setFieldErrors((prev) => ({ ...prev, chave1: "" }));
+          }}
+          error={fieldErrors.chave1}
         />
 
         <Input
@@ -150,43 +159,68 @@ export default function Seguranca() {
           placeholder="Digite aqui..."
           width="90%"
           value={chave2}
-          onChangeText={setChave2}
+          onChangeText={(text) => {
+            setChave2(text);
+            setFieldErrors((prev) => ({ ...prev, chave2: "" }));
+          }}
+          error={fieldErrors.chave2}
         />
       </View>
 
       <View style={styles.checkboxes}>
-        <CheckboxInput
-          label={
-            <Text>
-              Li e aceito os Termos de Uso e a{" "}
-              <Text style={{ color: "#007AFF", fontWeight: "500" }}>
-                Política de Privacidade
+        <View>
+          <CheckboxInput
+            label={
+              <Text>
+                Li e aceito os Termos de Uso e a{" "}
+                <Text
+                  style={{ color: "#007AFF", fontWeight: "500" }}
+                  onPress={() =>
+                    router.push("/(auth)/politica-privacidade")
+                  }
+                >
+                  Política de Privacidade
+                </Text>
               </Text>
-            </Text>
-          }
-          value={acceptTerms1}
-          onChange={setAcceptTerms1}
-        />
+            }
+            value={acceptTerms1}
+            onChange={(value) => {
+              setAcceptTerms1(value);
+              setFieldErrors((prev) => ({ ...prev, terms1: "" }));
+            }}
+          />
+          {!!fieldErrors.terms1 && (
+            <Text style={styles.errorText}>{fieldErrors.terms1}</Text>
+          )}
+        </View>
 
-        <CheckboxInput
-          label={
-            <Text>
-              O{" "}
-              <Text
-                style={{
-                  color: "#F05221",
-                  fontStyle: "italic",
-                  fontWeight: "900",
-                }}
-              >
-                DivulgAí
-              </Text>{" "}
-              nunca compartilhará seus dados com terceiros.
-            </Text>
-          }
-          value={acceptTerms2}
-          onChange={setAcceptTerms2}
-        />
+        <View>
+          <CheckboxInput
+            label={
+              <Text>
+                O{" "}
+                <Text
+                  style={{
+                    color: "#F05221",
+                    fontStyle: "italic",
+                    fontWeight: "900",
+                  }}
+                >
+                  DivulgAí
+                </Text>{" "}
+                nunca compartilhará seus dados com terceiros.
+              </Text>
+            }
+            value={acceptTerms2}
+            onChange={(value) => {
+              setAcceptTerms2(value);
+              setFieldErrors((prev) => ({ ...prev, terms2: "" }));
+            }}
+          />
+          {!!fieldErrors.terms2 && (
+            <Text style={styles.errorText}>{fieldErrors.terms2}</Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.boxbottom}>
@@ -211,23 +245,34 @@ const styles = StyleSheet.create({
     left: 25,
     top: 68,
   },
+
   boxtop: {
     flex: 0.5,
     justifyContent: "center",
     alignItems: "center",
   },
+
   inputarea: {
     flex: 1,
     gap: 50,
     justifyContent: "center",
   },
+
   checkboxes: {
     flex: 1,
     width: "80%",
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
+    gap: 10,
   },
+
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
+  },
+
   boxbottom: {
     flex: 0.5,
     justifyContent: "center",

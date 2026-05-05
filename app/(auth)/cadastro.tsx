@@ -3,13 +3,13 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import React from "react";
 import { Button } from "../../assets/components/Button";
 import { DateInput } from "../../assets/components/DateInput";
 import { Header } from "../../assets/components/Header";
 import { Input } from "../../assets/components/Input";
 import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
-import React from "react";
 
 // ================== MÁSCARAS ==================
 function onlyDigits(value: string) {
@@ -51,6 +51,7 @@ export default function Cadastro() {
   const [gender, setGender] = useState("");
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [estado, setEstado] = useState("");
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const router = useRouter();
 
@@ -65,7 +66,7 @@ export default function Cadastro() {
   }
 
   const handleSubmit = async () => {
-    const errors: string[] = [];
+   const errors: Record<string, string> = {};
 
     const nomeTrim = nome.trim();
     const emailTrim = email.trim().toLowerCase();
@@ -74,41 +75,44 @@ export default function Cadastro() {
     const telefoneLimpo = onlyDigits(telefone);
     const telefoneCompleto = dddLimpo + telefoneLimpo;
 
-    if (!nomeTrim) errors.push("Nome é obrigatório");
+if (!nomeTrim) errors.nome = "Nome é obrigatório";
 
-    if (!emailTrim) {
-      errors.push("Email é obrigatório");
-    } else if (!emailTrim.includes("@")) {
-      errors.push("Email deve conter '@'");
-    }
+if (!emailTrim) {
+  errors.email = "Email é obrigatório";
+} else if (!emailTrim.includes("@")) {
+  errors.email = "Email deve conter '@'";
+}
 
-    if (!senha) {
-      errors.push("Senha é obrigatória");
-    } else if (senha.length < 6) {
-      errors.push("Senha deve ter no mínimo 6 caracteres");
-    }
+if (!senha) {
+  errors.senha = "Senha é obrigatória";
+} else if (senha.length < 6) {
+  errors.senha = "Senha deve ter no mínimo 6 caracteres";
+}
 
-    if (!cpfLimpo) {
-      errors.push("CPF é obrigatório");
-    } else if (cpfLimpo.length !== 11) {
-      errors.push("CPF inválido");
-    }
+if (!cpfLimpo) {
+  errors.cpf = "CPF é obrigatório";
+} else if (cpfLimpo.length !== 11) {
+  errors.cpf = "CPF inválido";
+}
 
-    if (dddLimpo.length !== 2) {
-      errors.push("DDD inválido");
-    }
+if (dddLimpo.length !== 2) {
+  errors.telefoneDDD = "DDD inválido";
+}
 
-    if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
-      errors.push("Telefone inválido");
-    }
+if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
+  errors.telefone = "Telefone inválido";
+}
 
-    if (!birthDate) errors.push("Data de nascimento obrigatória");
-    if (!gender) errors.push("Gênero é obrigatório");
-    if (!estado) errors.push("Estado é obrigatório");
+    if (!birthDate)
+      errors.birthDate =
+        "O campo data de nascimento deve ser preenchido obrigatoriamente";
+    if (!gender)
+      errors.gender = "O campo gênero deve ser preenchido obrigatoriamente";
+    if (!estado)
+      errors.estado = "O campo estado deve ser preenchido obrigatoriamente";
 
-    if (errors.length > 0) {
-      console.log("Erros:", errors);
-      alert(errors.join("\n"));
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
       return;
     }
 
@@ -169,7 +173,15 @@ export default function Cadastro() {
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.inputContainer}>
-          <Input label="Nome*" value={nome} onChangeText={setNome} />
+           <Input
+            label="Nome*"
+            value={nome}
+            onChangeText={(text) => {
+              setNome(text);
+              setFieldErrors((prev) => ({ ...prev, nome: "" }));
+            }}
+            error={fieldErrors.nome}
+          />
 
           <View style={styles.rowInputs}>
             <Input
@@ -178,6 +190,7 @@ export default function Cadastro() {
               onChangeText={(text) => setTelefoneDDD(maskDDD(text))}
               width="21%"
               keyboardType="numeric"
+               error={fieldErrors.telefoneDDD}
             />
             <Input
               label="Telefone*"
@@ -185,6 +198,7 @@ export default function Cadastro() {
               onChangeText={(text) => setTelefone(maskPhone(text))}
               width="75%"
               keyboardType="numeric"
+               error={fieldErrors.telefone}
             />
           </View>
 
@@ -193,38 +207,56 @@ export default function Cadastro() {
             value={cpf}
             onChangeText={(text) => setCpf(maskCPF(text))}
             keyboardType="numeric"
+             error={fieldErrors.cpf}
           />
 
           <Input
             label="Email*"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              setFieldErrors((prev) => ({ ...prev, email: "" }));
+            }}
             autoCapitalize="none"
+            error={fieldErrors.email}
           />
 
           <Input
             label="Senha*"
             value={senha}
-            onChangeText={setSenha}
+             onChangeText={(text) => {
+              setSenha(text);
+              setFieldErrors((prev) => ({ ...prev, senha: "" }));
+            }}
             secureTextEntry
+            error={fieldErrors.senha}
           />
 
           <View style={styles.rowInputs}>
             <DateInput
               label="Data de nascimento*"
               value={birthDate || new Date()}
-              onChange={(date: Date) => setBirthDate(date)}
+              onChange={(date: Date) => {
+                setBirthDate(date);
+                setFieldErrors((prev) => ({ ...prev, birthDate: "" }));
+              }}
               width="48%"
+              error={fieldErrors.birthDate}
             />
 
             <SelectInput
               label="Gênero*"
               selectedValue={gender}
-              onValueChange={setGender}
+              onValueChange={(value) => {
+                setGender(value);
+                setFieldErrors((prev) => ({ ...prev, gender: "" }));
+              }}
               width="48%"
+               error={fieldErrors.gender}
               options={[
                 { label: "Masculino", value: "m" },
                 { label: "Feminino", value: "f" },
+                { label: "Não-binario", value: "b" },
                 { label: "Outro", value: "o" },
               ]}
             />
@@ -233,8 +265,12 @@ export default function Cadastro() {
           <SelectInput
             label="Estado*"
             selectedValue={estado}
-            onValueChange={setEstado}
+            onValueChange={(value) => {
+              setEstado(value);
+              setFieldErrors((prev) => ({ ...prev, estado: "" }));
+            }}
             options={estados}
+            error={fieldErrors.estado}
           />
 
 
