@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import React from "react";
 import {
   KeyboardTypeOptions,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -24,6 +25,8 @@ interface IInputProps {
   editable?: boolean;
 
   // NOVO
+  rightIcon?: keyof typeof Ionicons.glyphMap;
+  onPressRightIcon?: () => void;
   error?: string;
 }
 
@@ -40,6 +43,8 @@ export const Input = ({
   secureTextEntry,
   autoCapitalize,
   editable = true,
+   rightIcon,
+  onPressRightIcon,
   error,
 }: IInputProps) => {
   return (
@@ -51,22 +56,31 @@ export const Input = ({
         </View>
       )}
 
-      <TextInput
-        style={[
-          styles.input,
-          multiline && styles.textarea,
-          error && styles.inputError,
-        ]}
-        placeholder={placeholder}
-        placeholderTextColor={placeholderColor}
-        value={value}
-        onChangeText={onChangeText}
-        multiline={multiline}
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-        autoCapitalize={autoCapitalize}
-        editable={editable}
-      />
+            <View>
+        <TextInput
+          style={[
+            styles.input,
+            multiline && styles.textarea,
+            rightIcon && styles.inputWithRightIcon,
+            error && styles.inputError,
+          ]}
+          placeholder={placeholder}
+          placeholderTextColor={placeholderColor}
+          value={value}
+          onChangeText={onChangeText}
+          multiline={multiline}
+          keyboardType={keyboardType}
+          secureTextEntry={secureTextEntry}
+          autoCapitalize={autoCapitalize}
+          editable={editable}
+        />
+
+        {rightIcon && (
+          <Pressable style={styles.rightIconButton} onPress={onPressRightIcon}>
+            <Ionicons name={rightIcon} size={22} color="#666" />
+          </Pressable>
+        )}
+      </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
@@ -96,6 +110,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
+
+  
+  inputWithRightIcon: {
+    paddingRight: 44,
+  },
+  rightIconButton: {
+    position: "absolute",
+    right: 12,
+    top: 14,
+  },
+  
   inputError: {
     borderColor: "red",
   },

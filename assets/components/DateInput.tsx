@@ -5,9 +5,11 @@ import { typography } from "../globalstyles/fonts";
 
 interface IDateInputProps {
   label?: string;
-  value: Date;
+  value: Date | null;
   onChange: (date: Date) => void;
   width?: number | string;
+   placeholder?: string;
+  error?: string;
 }
 
 export const DateInput = ({
@@ -15,6 +17,8 @@ export const DateInput = ({
   value,
   onChange,
   width = "100%",
+    placeholder = "Selecione",
+  error,
 }: IDateInputProps) => {
   const [showPicker, setShowPicker] = useState(false);
 
@@ -29,13 +33,21 @@ export const DateInput = ({
     <View style={[styles.container, { width }]}>
       {label && <Text style={typography.inputlabel}>{label}</Text>}
 
-      <Pressable style={styles.input} onPress={() => setShowPicker(true)}>
-        <Text style={styles.text}>{value.toLocaleDateString("pt-BR")}</Text>
+      <Pressable
+        style={[styles.input, error && styles.inputError]}
+        onPress={() => setShowPicker(true)}
+      >
+        <Text style={[styles.text, !value && styles.placeholderText]}>
+          {value ? value.toLocaleDateString("pt-BR") : placeholder}
+        </Text>
       </Pressable>
+
+       {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
 
       {showPicker && (
         <DateTimePicker
-          value={value}
+          value={value || new Date()}
           mode="date"
           display="default"
           maximumDate={new Date()}
@@ -62,7 +74,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
+    inputError: {
+    borderColor: "red",
+  },
   text: {
     fontSize: 16,
+  },
+  placeholderText: {
+    color: "#999",
+  },
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
   },
 });

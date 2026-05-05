@@ -49,6 +49,7 @@ export default function Cadastro() {
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+   const [showPassword, setShowPassword] = useState(false);
   const [gender, setGender] = useState("");
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [estado, setEstado] = useState("");
@@ -65,6 +66,19 @@ export default function Cadastro() {
       date.getSeconds(),
     )}`;
   }
+
+    function isAtLeast18YearsOld(date: Date) {
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+      age--;
+    }
+
+    return age >= 18;
+  }
+
 
   const handleSubmit = async () => {
    const errors: Record<string, string> = {};
@@ -104,10 +118,13 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
   errors.telefone = "Telefone inválido";
 }
 
-    if (!birthDate)
+    if (!birthDate) {
       errors.birthDate =
         "O campo data de nascimento deve ser preenchido obrigatoriamente";
-    if (!gender)
+       } else if (!isAtLeast18YearsOld(birthDate)) {
+      errors.birthDate = "Você precisa ter 18 anos ou mais";
+    }
+    if (!gender) 
       errors.gender = "O campo gênero deve ser preenchido obrigatoriamente";
     if (!estado)
       errors.estado = "O campo estado deve ser preenchido obrigatoriamente";
@@ -229,7 +246,10 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
               setSenha(text);
               setFieldErrors((prev) => ({ ...prev, senha: "" }));
             }}
-            secureTextEntry
+            secureTextEntry={!showPassword}
+            rightIcon={showPassword ? "eye-off-outline" : "eye-outline"}
+            onPressRightIcon={() => setShowPassword((prev) => !prev)}
+            
             error={fieldErrors.senha}
           />
 
@@ -239,6 +259,7 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
     <Text>Data de nascimento*</Text>
     <input
       type="date"
+       placeholder="Selecione"
       style={{
         padding: 10,
         borderRadius: 6,
@@ -246,6 +267,10 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
         marginTop: 4,
       }}
       onChange={(e) => {
+         if (!e.target.value) {
+          setBirthDate(null);
+          return;
+        }
         const date = new Date(e.target.value);
         setBirthDate(date);
         setFieldErrors((prev) => ({ ...prev, birthDate: "" }));
@@ -258,7 +283,7 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
 ) : (
   <DateInput
     label="Data de nascimento*"
-    value={birthDate || new Date()}
+    value={birthDate}
     onChange={(date: Date) => {
       setBirthDate(date);
       setFieldErrors((prev) => ({ ...prev, birthDate: "" }));
@@ -278,6 +303,7 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
               width="48%"
                error={fieldErrors.gender}
               options={[
+                 { label: "Selecione", value: "" },
                 { label: "Masculino", value: "m" },
                 { label: "Feminino", value: "f" },
                 { label: "Não-binario", value: "b" },

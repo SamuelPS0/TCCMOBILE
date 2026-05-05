@@ -25,6 +25,9 @@ export default function Seguranca() {
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+    const normalizeSecurityAnswer = (value: string) =>
+    value.replace(/\s+/g, "").toLowerCase();
+
   const handleContinue = async () => {
     if (loading) return;
 
@@ -71,6 +74,10 @@ export default function Seguranca() {
           ? "Outro"
           : "Não informado";
 
+            const chave1Normalizada = normalizeSecurityAnswer(chave1);
+      const chave2Normalizada = normalizeSecurityAnswer(chave2);
+
+
       const payload = {
         nome,
         email,
@@ -79,6 +86,8 @@ export default function Seguranca() {
         statusUsuario: true,
         ps_01: chave1,
         ps_02: chave2,
+          ps_01: chave1Normalizada,
+        ps_02: chave2Normalizada,
       };
 
       const response = await globalapi.post("Usuario", payload);
