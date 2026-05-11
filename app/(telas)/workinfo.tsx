@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
+import { normalizeContactLink } from "../../src/utils/contactLinks";
 import React from "react";
 import { buscarCep } from "../../assets/api/apiviacep";
 import { globalapi, sanitizeForLog } from "../../assets/api/globalapi";
@@ -378,12 +378,12 @@ export default function Workinfo() {
       if (contatosParaEnviar.length > 0) {
         const contatosComResultado = await Promise.allSettled(
           contatosParaEnviar.map(async (contato, index) => {
-            const contatoPayload = {
-              prestadorId,
-              tipoContato: contato.tipo,
-              link: contato.valor,
-              statusContato: "ATIVO",
-            };
+       const contatoPayload = {
+  prestadorId,
+  tipoContato: contato.tipo,
+  link: normalizeContactLink(contato.tipo, contato.valor),
+  statusContato: "ATIVO",
+};
 
             console.log(
               `[WORKINFO CONTATO ${index + 1}] payload:`,

@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { globalapi } from "../../assets/api/globalapi";
@@ -25,8 +25,10 @@ export default function Seguranca() {
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-    const normalizeSecurityAnswer = (value: string) =>
-    value.replace(/\s+/g, "").toLowerCase();
+const normalizeSecurityAnswer = (value = "") =>
+  String(value ?? "")
+    .toLowerCase()
+    .replace(/\s/g, "");
 
   const handleContinue = async () => {
     if (loading) return;
@@ -74,21 +76,19 @@ export default function Seguranca() {
           ? "Outro"
           : "Não informado";
 
-            const chave1Normalizada = normalizeSecurityAnswer(chave1);
-      const chave2Normalizada = normalizeSecurityAnswer(chave2);
+const chave1Normalizada = normalizeSecurityAnswer(chave1);
+const chave2Normalizada = normalizeSecurityAnswer(chave2);
 
 
-      const payload = {
-        nome,
-        email,
-        senha,
-        nivelAcesso: "PRESTADOR",
-        statusUsuario: true,
-        ps_01: chave1,
-        ps_02: chave2,
-          ps_01: chave1Normalizada,
-        ps_02: chave2Normalizada,
-      };
+const payload = {
+  nome,
+  email,
+  senha,
+  nivelAcesso: "PRESTADOR",
+  statusUsuario: true,
+  ps_01: chave1Normalizada,
+  ps_02: chave2Normalizada,
+};
 
       const response = await globalapi.post("Usuario", payload);
 
