@@ -16,7 +16,7 @@ export const getPrestadorByUsuario = async (usuarioId) => {
       return Number(idFromNested ?? idFromFlat) === Number(usuarioId);
     });
 
-    const prestadorMaisRecente = prestadoresDoUsuario
+    const prestadorMaisRecenteAtivo = prestadoresDoUsuario
       .filter((item) => {
         const status = String(
           item?.statusPrestador ?? item?.status_prestador ?? item?.status ?? "",
@@ -28,8 +28,13 @@ export const getPrestadorByUsuario = async (usuarioId) => {
       })
       .sort((a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0))[0];
 
-    if (prestadorMaisRecente) return prestadorMaisRecente;
-  } catch (listError) {
+     if (prestadorMaisRecenteAtivo) return prestadorMaisRecenteAtivo;
+
+    const prestadorMaisRecenteInativo = prestadoresDoUsuario.sort(
+      (a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0),
+    )[0];
+
+    if (prestadorMaisRecenteInativo) return prestadorMaisRecenteInativo;} catch (listError) {
     console.log("WARN getPrestadorByUsuario list fallback:", listError);
   }
 

@@ -216,9 +216,9 @@ export default function Workinfo() {
         if (!prestador?.id) {
           Alert.alert(
             "Perfil incompleto",
-            "Você ainda não possui perfil profissional. Complete em Criar card.",
+            "Você ainda não possui perfil profissional.",
           );
-          router.replace("/(telas)/accCreate");
+          router.replace("/(tabs)");
           return;
         }
 

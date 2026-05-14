@@ -46,8 +46,12 @@ export default function Landing() {
   const [analysisModalVisible, setAnalysisModalVisible] = useState(false);
   const [analysisModalShown, setAnalysisModalShown] = useState(false);
 
-  const hasServico = !!(servico?.id ?? servico?.idServico ?? servico?.id_servico);
-
+    const hasCardData = !!(
+    prestador?.id ||
+    servico?.id ||
+    servico?.idServico ||
+    servico?.id_servico
+  );
   function getPrestadorStatusLabel() {
     const statusOriginal =
       prestador?.statusPrestador ?? prestador?.status_prestador ?? "EM ANALISE";
@@ -293,7 +297,7 @@ export default function Landing() {
               />
               <Text style={styles.loaderText}>Carregando usuário...</Text>
             </View>
-          ) : !hasServico ? (
+          ) : !hasCardData ? (
             <Pressable onPress={handleCreateProfile}>
               <View style={styles.createCard}>
                 <Ionicons name="add-outline" size={48} color="#000000" />
