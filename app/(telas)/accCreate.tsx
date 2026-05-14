@@ -20,11 +20,86 @@ import { ProfilePhoto } from "../../assets/components/ProfilePhoto";
 import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
 import { useAuth } from "../../src/context/AuthContext";
-import { updateUsuarioFoto } from "../../src/services/prestadorService";
+import {
+  getPrestadorByUsuario,
+  getServicosByPrestador,
+  updateUsuarioFoto,
+} from "../../src/services/prestadorService";
 import {
   clearPendingPrestadorProfile,
   getPendingPrestadorProfile,
 } from "../../src/storage/onboardingStorage";
+
+
+async function saveWithFallback(options: {
+  method: "put" | "post";
+  endpoints: string[];
+  payload: Record<string, any>;
+}) {
+  const { method, endpoints, payload } = options;
+
+  for (const endpoint of endpoints) {
+    try {
+      if (method === "put") {
+        const response = await globalapi.put(endpoint, payload);
+        return response.data;
+      }
+
+      const response = await globalapi.post(endpoint, payload);
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status !== 404) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error(`ENDPOINT_NOT_FOUND:${endpoints.join("|")}`);
+}
+
+async function inativarPrestadoresDuplicados(
+  usuarioId: number,
+  prestadorAtualId: number,
+) {
+  let prestadores: any[] = [];
+
+  try {
+    const response = await globalapi.get("prestador");
+    prestadores = Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.status !== 404) {
+      console.log("WARN prestadores duplicados:", error?.message || error);
+      return;
+    }
+
+    const response = await globalapi.get("Prestador");
+    prestadores = Array.isArray(response.data) ? response.data : [];
+  }
+
+  const duplicados = prestadores.filter((item) => {
+    const idUsuario = item?.usuario?.id ?? item?.usuarioId ?? item?.usuario_id;
+    const idPrestador = item?.id ?? item?.prestadorId ?? item?.prestador_id;
+
+    return (
+      Number(idUsuario) === Number(usuarioId) &&
+      Number(idPrestador) !== Number(prestadorAtualId)
+    );
+  });
+
+  await Promise.allSettled(
+    duplicados.map((item) =>
+      saveWithFallback({
+        method: "put",
+        endpoints: [`prestador/${item.id}`, `Prestador/${item.id}`],
+        payload: {
+          ...item,
+          statusPrestador: "INATIVO",
+          status_prestador: "INATIVO",
+        },
+      }),
+    ),
+  );
+}
 
 export default function AccCreate() {
   const router = useRouter();
@@ -239,15 +314,56 @@ if (erro) return;
         bairro,
         cidade: municipio,
         uf: estado,
-        statusPrestador: "ATIVO",
+        statusPrestador: "EM ANALISE",
+        status_prestador: "EM ANALISE",
       };
 
       console.log("PRESTADOR:", prestadorPayload);
 
-      const prestadorRes = await globalapi.post("prestador", prestadorPayload);
-      const prestadorId = prestadorRes.data?.id;
+      const prestadorExistente = await getPrestadorByUsuario(Number(userId));
+      const prestadorSalvo = prestadorExistente?.id
+        ? await saveWithFallback({
+            method: "put",
+            endpoints: [
+              `prestador/${prestadorExistente.id}`,
+              `Prestador/${prestadorExistente.id}`,
+            ],
+            payload: prestadorPayload,
+          })
+        : await saveWithFallback({
+            method: "post",
+            endpoints: ["prestador", "Prestador"],
+            payload: prestadorPayload,
+          });
+
+      const prestadorId = prestadorExistente?.id ?? prestadorSalvo?.id;
 
       if (!prestadorId) throw new Error("Prestador não retornado");
+
+      const statusSalvo = String(
+        prestadorSalvo?.statusPrestador ?? prestadorSalvo?.status_prestador ?? "",
+      )
+        .trim()
+        .toUpperCase();
+
+      if (statusSalvo !== "EM ANALISE") {
+        await saveWithFallback({
+          method: "put",
+          endpoints: [`prestador/${prestadorId}`, `Prestador/${prestadorId}`],
+          payload: {
+            ...prestadorPayload,
+            statusPrestador: "EM ANALISE",
+            status_prestador: "EM ANALISE",
+          },
+        });
+      }
+
+      await inativarPrestadoresDuplicados(Number(userId), Number(prestadorId));
+
+      const servicosExistentes = await getServicosByPrestador(prestadorId);
+      const servicoExistente = Array.isArray(servicosExistentes)
+        ? servicosExistentes[0]
+        : null;
 
       const servicoPayload = {
         nome,
@@ -255,7 +371,7 @@ if (erro) return;
         statusServico: "ATIVO",
         prestadorId,
         categoriaId: Number(categoria),
-        foto: eventImage?.base64 || null,
+        foto: eventImage?.base64 || servicoExistente?.foto || null,
       };
 
       console.log("SERVICO:", {
@@ -263,7 +379,22 @@ if (erro) return;
         foto: servicoPayload.foto ? "[BASE64 OK]" : null,
       });
 
-      await globalapi.post("servico", servicoPayload);
+      if (servicoExistente?.id) {
+        await saveWithFallback({
+          method: "put",
+          endpoints: [
+            `servico/${servicoExistente.id}`,
+            `Servico/${servicoExistente.id}`,
+          ],
+          payload: servicoPayload,
+        });
+      } else {
+        await saveWithFallback({
+          method: "post",
+          endpoints: ["servico", "Servico"],
+          payload: servicoPayload,
+        });
+      }
 
       if (contatosParaEnviar.length > 0) {
         const contatosComResultado = await Promise.allSettled(
@@ -353,7 +484,10 @@ if (erro) return;
 
       console.log("=== SUCCESS ===");
 
-      router.replace("/(tabs)");
+      router.replace({
+        pathname: "/(tabs)",
+        params: { perfilEnviadoAnalise: "1" },
+      });
     } catch (error: any) {
       console.log("=== ERROR ===");
       console.log(error?.response?.data || error.message);

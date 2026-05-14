@@ -10,13 +10,25 @@ export const getPrestadorByUsuario = async (usuarioId) => {
     const response = await globalapi.get("prestador");
     const lista = Array.isArray(response.data) ? response.data : [];
 
-    const prestador = lista.find((item) => {
+    const prestadoresDoUsuario = lista.filter((item) => {
       const idFromNested = item?.usuario?.id;
       const idFromFlat = item?.usuarioId ?? item?.usuario_id;
       return Number(idFromNested ?? idFromFlat) === Number(usuarioId);
     });
 
-    if (prestador) return prestador;
+    const prestadorMaisRecente = prestadoresDoUsuario
+      .filter((item) => {
+        const status = String(
+          item?.statusPrestador ?? item?.status_prestador ?? item?.status ?? "",
+        )
+          .trim()
+          .toUpperCase();
+
+        return status !== "INATIVO" && status !== "FALSE";
+      })
+      .sort((a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0))[0];
+
+    if (prestadorMaisRecente) return prestadorMaisRecente;
   } catch (listError) {
     console.log("WARN getPrestadorByUsuario list fallback:", listError);
   }

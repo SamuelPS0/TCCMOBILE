@@ -111,6 +111,7 @@ export default function Workinfo() {
 
   const [prestadorId, setPrestadorId] = useState<number | null>(null);
   const [servicoId, setServicoId] = useState<number | null>(null);
+ const [statusPrestador, setStatusPrestador] = useState("EM ANALISE");
 
   const genderOptions = useMemo(
     () => [
@@ -222,6 +223,9 @@ export default function Workinfo() {
         }
 
         setPrestadorId(prestador.id);
+        setStatusPrestador(
+          prestador?.statusPrestador ?? prestador?.status_prestador ?? "EM ANALISE",
+        );
 
         const [servicos, contatoRes] = await Promise.all([
           getServicosByPrestador(prestador.id),
@@ -339,7 +343,7 @@ export default function Workinfo() {
         bairro,
         cidade: municipio,
         uf: estado,
-        statusPrestador: "ATIVO",
+        statusPrestador,
       };
 
       await saveWithFallback({

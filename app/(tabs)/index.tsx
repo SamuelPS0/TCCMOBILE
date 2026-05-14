@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -30,6 +30,7 @@ import { breakLineEveryNChars } from "../../src/utils/formatFeedbackText";
 
 export default function Landing() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { user } = useAuth();
   const { height } = useWindowDimensions();
 
@@ -42,8 +43,48 @@ export default function Landing() {
   const [feedbackModalTitle, setFeedbackModalTitle] = useState("");
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [analysisModalVisible, setAnalysisModalVisible] = useState(false);
+  const [analysisModalShown, setAnalysisModalShown] = useState(false);
 
-  const hasServico = !!servico?.id;
+  const hasServico = !!(servico?.id ?? servico?.idServico ?? servico?.id_servico);
+
+  function getPrestadorStatusLabel() {
+    const statusOriginal =
+      prestador?.statusPrestador ?? prestador?.status_prestador ?? "EM ANALISE";
+    const statusNormalizado = String(statusOriginal || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[ÁÀÂÃ]/g, "A")
+      .replace(/[ÉÈÊ]/g, "E")
+      .replace(/[ÍÌÎ]/g, "I")
+      .replace(/[ÓÒÔÕ]/g, "O")
+      .replace(/[ÚÙÛ]/g, "U")
+      .replace(/_/g, " ");
+
+    if (statusNormalizado === "EM ANALISE") return "EM ANÁLISE";
+    if (statusNormalizado === "ATIVO") return "ATIVO";
+    if (statusNormalizado === "INATIVO") return "INATIVO";
+
+    return String(statusOriginal || "EM ANALISE").replace("ANALISE", "ANÁLISE");
+  }
+
+  function getPrestadorStatusStyle() {
+    const status = getPrestadorStatusLabel();
+
+    if (status === "ATIVO") return styles.cardStatusActive;
+    if (status === "INATIVO") return styles.cardStatusInactive;
+
+    return styles.cardStatusAnalysis;
+  }
+
+  function getServicoContador() {
+    return Number(servico?.contador ?? servico?.contadorServico ?? 0) || 0;
+  }
+
+  function closeAnalysisModal() {
+    setAnalysisModalVisible(false);
+    router.replace("/(tabs)");
+  }
 
   function sanitizeDeep(value: any, keyName = ""): any {
     if (value == null) return value;
@@ -132,18 +173,33 @@ export default function Landing() {
           : sanitizeDeep(servicos),
       );
 
-      const servicoAtivo = Array.isArray(servicos)
+      const servicoVisivel = Array.isArray(servicos)
         ? servicos.find((item: any) => {
-            const statusOriginal = item?.statusServico;
-            const statusNormalizado = String(statusOriginal || "").toUpperCase();
+            const statusOriginal =
+              item?.statusServico ?? item?.status_servico ?? item?.status;
+            const statusNormalizado = String(statusOriginal || "")
+              .trim()
+              .toUpperCase()
+              .replace(/_/g, " ");
 
             return statusNormalizado === "ATIVO" || statusOriginal === true;
-          })
+          }) ||
+          servicos.find((item: any) => {
+            const statusOriginal =
+              item?.statusServico ?? item?.status_servico ?? item?.status;
+            const statusNormalizado = String(statusOriginal || "")
+              .trim()
+              .toUpperCase()
+              .replace(/_/g, " ");
+
+            return statusNormalizado !== "INATIVO" && statusOriginal !== false;
+          }) ||
+          servicos[0]
         : null;
 
-      console.log("[HOME] servicoAtivo encontrado:", sanitizeDeep(servicoAtivo));
+      console.log("[HOME] servicoVisivel encontrado:", sanitizeDeep(servicoVisivel));
 
-      setServico(servicoAtivo || null);
+      setServico(servicoVisivel || null);
     } catch (error: any) {
       console.log("[HOME] Erro ao carregar card da home:", sanitizeError(error));
 
@@ -162,6 +218,13 @@ export default function Landing() {
       loadHomeCard();
     }, [loadHomeCard]),
   );
+
+  useEffect(() => {
+    if (params.perfilEnviadoAnalise === "1" && !analysisModalShown) {
+      setAnalysisModalVisible(true);
+      setAnalysisModalShown(true);
+    }
+  }, [analysisModalShown, params.perfilEnviadoAnalise]);
 
   async function handleCreateProfile() {
     if (!user) {
@@ -274,6 +337,8 @@ export default function Landing() {
                 style={styles.serviceImage}
               />
 
+              
+
               <View style={styles.feedbackButtonsRow}>
                 <Pressable
                   style={styles.feedbackButton}
@@ -292,6 +357,24 @@ export default function Landing() {
                     Minhas ocorrências
                   </Text>
                 </Pressable>
+                
+              </View>
+              <View style={styles.cardFooter}>
+                <View style={styles.viewsRow}>
+                  <Ionicons name="eye" size={30} color="#F05221" />
+                  <Text style={styles.cardFooterText}>
+                    Seu perfil foi visto por{" "}
+                    <Text style={styles.cardCounter}>{getServicoContador()}</Text>{" "}
+                    pessoas
+                  </Text>
+                </View>
+
+                <Text style={styles.cardFooterText}>
+                  Seu perfil está:{" "}
+                  <Text style={getPrestadorStatusStyle()}>
+                    {getPrestadorStatusLabel()}
+                  </Text>
+                </Text>
               </View>
             </View>
           )}
@@ -336,6 +419,50 @@ export default function Landing() {
             >
               <Text style={styles.closeButtonText}>Fechar</Text>
             </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={analysisModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAnalysisModal}
+      >
+        <View style={styles.analysisBackdrop}>
+          <View style={styles.analysisShadowCard} />
+          <View style={styles.analysisModalCard}>
+            <View style={styles.analysisTopBlock}>
+              <View style={styles.analysisIconCircle}>
+                <Ionicons name="person-add-outline" size={44} color="#F05221" />
+              </View>
+            </View>
+
+            <View style={styles.analysisBody}>
+              <Text style={styles.analysisTitle}>Seu perfil foi enviado!</Text>
+              <Text style={styles.analysisDescription}>
+                Nossa equipe vai analisar seu perfil com atenção para garantir
+                que tudo esteja de acordo com nossos critérios.
+              </Text>
+
+              <View style={styles.analysisInfoBox}>
+                <Ionicons name="search-outline" size={28} color="#F05221" />
+                <View style={styles.analysisInfoTextWrapper}>
+                  <Text style={styles.analysisInfoTitle}>E agora?</Text>
+                  <Text style={styles.analysisInfoText}>
+                    Volte em breve para verificar se seu perfil foi aprovado.
+                    Não enviaremos notificação automática por e-mail.
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable
+                style={styles.analysisConfirmButton}
+                onPress={closeAnalysisModal}
+              >
+                <Text style={styles.analysisConfirmButtonText}>Certo!</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -460,6 +587,48 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
   },
 
+  cardFooter: {
+    width: "100%",
+    marginTop: 10,
+    marginBottom: 8,
+    paddingTop: 18,
+    borderTopWidth: 1,
+    borderTopColor: "#eeeeee",
+    alignItems: "center",
+    gap: 14,
+  },
+
+  viewsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+
+  cardFooterText: {
+    color: "#111",
+    fontFamily: "Poppins_700Bold",
+    fontSize: 18,
+    textAlign: "center",
+  },
+
+  cardCounter: {
+    color: "#F05221",
+  },
+
+  cardStatusActive: {
+    color: "#129A3A",
+  },
+
+  cardStatusAnalysis: {
+    color: "#F05221",
+  },
+
+  cardStatusInactive: {
+    color: "#e03535",
+  },
+
   feedbackButtonsRow: {
     marginTop: 16,
     flexDirection: "row",
@@ -560,5 +729,129 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: "#fff",
     fontWeight: "600",
+  },
+
+  analysisBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+
+  analysisShadowCard: {
+    position: "absolute",
+    width: "78%",
+    height: 410,
+    backgroundColor: "#C8C8C8",
+    borderRadius: 10,
+    transform: [{ translateY: 14 }],
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+
+  analysisModalCard: {
+    width: "86%",
+    maxWidth: 360,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+
+  analysisTopBlock: {
+    height: 126,
+    backgroundColor: "#FF3F1D",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    borderBottomLeftRadius: 130,
+    borderBottomRightRadius: 130,
+  },
+
+  analysisIconCircle: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: "#FFF1EC",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: -34,
+    borderWidth: 1,
+    borderColor: "#FFE1D8",
+  },
+
+  analysisBody: {
+    paddingTop: 46,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    alignItems: "center",
+  },
+
+  analysisTitle: {
+    color: "#F05221",
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 24,
+    textAlign: "center",
+  },
+
+  analysisDescription: {
+    marginTop: 18,
+    color: "#3F3F4F",
+    fontFamily: "Poppins_400Regular",
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+  },
+
+  analysisInfoBox: {
+    width: "100%",
+    marginTop: 22,
+    backgroundColor: "#FFF3F0",
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  analysisInfoTextWrapper: {
+    flex: 1,
+  },
+
+  analysisInfoTitle: {
+    color: "#F05221",
+    fontFamily: "Poppins_700Bold",
+    fontSize: 12,
+    marginBottom: 4,
+  },
+
+  analysisInfoText: {
+    color: "#3F3F4F",
+    fontFamily: "Poppins_400Regular",
+    fontSize: 10,
+    lineHeight: 15,
+  },
+
+  analysisConfirmButton: {
+    width: "100%",
+    marginTop: 28,
+    backgroundColor: "#F05221",
+    borderRadius: 5,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+
+  analysisConfirmButtonText: {
+    color: "#FFFFFF",
+    fontFamily: "Poppins_700Bold",
+    fontSize: 22,
   },
 });
