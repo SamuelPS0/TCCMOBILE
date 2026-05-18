@@ -26,6 +26,29 @@ import {
   getPendingPrestadorProfile,
 } from "../../src/storage/onboardingStorage";
 
+const STATUS_PRESTADOR_EM_ANALISE = "EM_ANALISE";
+
+async function forcePrestadorEmAnalise(
+  prestadorId: number,
+  payloadBase: Record<string, any>,
+) {
+  const payload = {
+    ...payloadBase,
+    statusPrestador: STATUS_PRESTADOR_EM_ANALISE,
+    status_prestador: STATUS_PRESTADOR_EM_ANALISE,
+  };
+
+  try {
+    return await globalapi.put(`prestador/${prestadorId}`, payload);
+  } catch (error: any) {
+    if (error?.response?.status !== 404) {
+      throw error;
+    }
+
+    return globalapi.put(`Prestador/${prestadorId}`, payload);
+  }
+}
+
 export default function AccCreate() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -239,7 +262,8 @@ if (erro) return;
         bairro,
         cidade: municipio,
         uf: estado,
-        statusPrestador: "ATIVO",
+        statusPrestador: STATUS_PRESTADOR_EM_ANALISE,
+        status_prestador: STATUS_PRESTADOR_EM_ANALISE,
       };
 
       console.log("PRESTADOR:", prestadorPayload);
@@ -248,6 +272,19 @@ if (erro) return;
       const prestadorId = prestadorRes.data?.id;
 
       if (!prestadorId) throw new Error("Prestador não retornado");
+
+      const statusRetornado = String(
+        prestadorRes.data?.statusPrestador ??
+          prestadorRes.data?.status_prestador ??
+          "",
+      )
+        .trim()
+        .toUpperCase()
+        .replace(/ /g, "_");
+
+      if (statusRetornado !== STATUS_PRESTADOR_EM_ANALISE) {
+        await forcePrestadorEmAnalise(Number(prestadorId), prestadorPayload);
+      }
 
       const servicoPayload = {
         nome,
@@ -353,7 +390,10 @@ if (erro) return;
 
       console.log("=== SUCCESS ===");
 
-      router.replace("/(tabs)");
+      router.replace({
+        pathname: "/(tabs)",
+        params: { perfilEnviadoAnalise: "1" },
+      });
     } catch (error: any) {
       console.log("=== ERROR ===");
       console.log(error?.response?.data || error.message);
