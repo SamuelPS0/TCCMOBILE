@@ -8,7 +8,8 @@ interface IDateInputProps {
   value: Date | null;
   onChange: (date: Date) => void;
   width?: number | string;
-   placeholder?: string;
+  placeholder?: string;
+  minimumDate?: Date;
   error?: string;
 }
 
@@ -17,7 +18,8 @@ export const DateInput = ({
   value,
   onChange,
   width = "100%",
-    placeholder = "Selecione",
+  placeholder = "Selecione",
+  minimumDate,
   error,
 }: IDateInputProps) => {
   const [showPicker, setShowPicker] = useState(false);
@@ -42,14 +44,14 @@ export const DateInput = ({
         </Text>
       </Pressable>
 
-       {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {showPicker && (
         <DateTimePicker
           value={value || new Date()}
           mode="date"
           display="default"
+          minimumDate={minimumDate}
           maximumDate={new Date()}
           onChange={handleChange}
         />
@@ -74,7 +76,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-    inputError: {
+  inputError: {
     borderColor: "red",
   },
   text: {

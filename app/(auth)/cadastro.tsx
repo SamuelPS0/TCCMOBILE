@@ -42,6 +42,22 @@ function maskPhone(value: string) {
   return digits.replace(/(\d{5})(\d+)/, "$1-$2");
 }
 
+function getPasswordRequirements(value: string) {
+  return [
+    { label: "Mínimo de 6 caracteres", isValid: value.length >= 6 },
+    { label: "Uma letra maiúscula", isValid: /[A-Z]/.test(value) },
+    { label: "Uma letra minúscula", isValid: /[a-z]/.test(value) },
+    { label: "Um número", isValid: /\d/.test(value) },
+    { label: "Uma pontuação", isValid: /[!-/:-@[-`{-~]/.test(value) },
+  ];
+}
+
+function isStrongPassword(value: string) {
+  return getPasswordRequirements(value).every(
+    (requirement) => requirement.isValid,
+  );
+}
+
 export default function Cadastro() {
   const [nome, setNome] = useState("");
   const [telefoneDDD, setTelefoneDDD] = useState("");
@@ -49,13 +65,14 @@ export default function Cadastro() {
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-   const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [gender, setGender] = useState("");
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [estado, setEstado] = useState("");
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const router = useRouter();
+  const passwordRequirements = getPasswordRequirements(senha);
 
   function formatDate(date: Date) {
     const pad = (n: number) => n.toString().padStart(2, "0");
@@ -67,21 +84,23 @@ export default function Cadastro() {
     )}`;
   }
 
-    function isAtLeast18YearsOld(date: Date) {
+  function isAtLeast18YearsOld(date: Date) {
     const today = new Date();
     let age = today.getFullYear() - date.getFullYear();
     const monthDiff = today.getMonth() - date.getMonth();
 
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < date.getDate())
+    ) {
       age--;
     }
 
     return age >= 18;
   }
 
-
   const handleSubmit = async () => {
-   const errors: Record<string, string> = {};
+    const errors: Record<string, string> = {};
 
     const nomeTrim = nome.trim();
     const emailTrim = email.trim().toLowerCase();
@@ -90,41 +109,44 @@ export default function Cadastro() {
     const telefoneLimpo = onlyDigits(telefone);
     const telefoneCompleto = dddLimpo + telefoneLimpo;
 
-if (!nomeTrim) errors.nome = "Nome é obrigatório";
+    if (!nomeTrim) errors.nome = "Nome é obrigatório";
 
-if (!emailTrim) {
-  errors.email = "Email é obrigatório";
-} else if (!emailTrim.includes("@")) {
-  errors.email = "Email deve conter '@'";
-}
+    if (!emailTrim) {
+      errors.email = "Email é obrigatório";
+    } else if (!emailTrim.includes("@")) {
+      errors.email = "Email deve conter '@'";
+    }
 
-if (!senha) {
-  errors.senha = "Senha é obrigatória";
-} else if (senha.length < 6) {
-  errors.senha = "Senha deve ter no mínimo 6 caracteres";
-}
+    if (!senha) {
+      errors.senha = "Senha é obrigatória";
+    } else if (senha.length < 6) {
+      errors.senha = "Senha deve ter no mínimo 6 caracteres";
+    } else if (!isStrongPassword(senha)) {
+      errors.senha =
+        "Senha deve conter letra maiúscula, letra minúscula, número e pontuação";
+    }
 
-if (!cpfLimpo) {
-  errors.cpf = "CPF é obrigatório";
-} else if (cpfLimpo.length !== 11) {
-  errors.cpf = "CPF inválido";
-}
+    if (!cpfLimpo) {
+      errors.cpf = "CPF é obrigatório";
+    } else if (cpfLimpo.length !== 11) {
+      errors.cpf = "CPF inválido";
+    }
 
-if (dddLimpo.length !== 2) {
-  errors.telefoneDDD = "DDD inválido";
-}
+    if (dddLimpo.length !== 2) {
+      errors.telefoneDDD = "DDD inválido";
+    }
 
-if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
-  errors.telefone = "Telefone inválido";
-}
+    if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
+      errors.telefone = "Telefone inválido";
+    }
 
     if (!birthDate) {
       errors.birthDate =
         "O campo data de nascimento deve ser preenchido obrigatoriamente";
-       } else if (!isAtLeast18YearsOld(birthDate)) {
+    } else if (!isAtLeast18YearsOld(birthDate)) {
       errors.birthDate = "Você precisa ter 18 anos ou mais";
     }
-    if (!gender) 
+    if (!gender)
       errors.gender = "O campo gênero deve ser preenchido obrigatoriamente";
     if (!estado)
       errors.estado = "O campo estado deve ser preenchido obrigatoriamente";
@@ -191,7 +213,7 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.inputContainer}>
-           <Input
+          <Input
             label="Nome*"
             value={nome}
             onChangeText={(text) => {
@@ -208,7 +230,7 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
               onChangeText={(text) => setTelefoneDDD(maskDDD(text))}
               width="21%"
               keyboardType="numeric"
-               error={fieldErrors.telefoneDDD}
+              error={fieldErrors.telefoneDDD}
             />
             <Input
               label="Telefone*"
@@ -216,7 +238,7 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
               onChangeText={(text) => setTelefone(maskPhone(text))}
               width="75%"
               keyboardType="numeric"
-               error={fieldErrors.telefone}
+              error={fieldErrors.telefone}
             />
           </View>
 
@@ -225,7 +247,7 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
             value={cpf}
             onChangeText={(text) => setCpf(maskCPF(text))}
             keyboardType="numeric"
-             error={fieldErrors.cpf}
+            error={fieldErrors.cpf}
           />
 
           <Input
@@ -239,59 +261,78 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
             error={fieldErrors.email}
           />
 
-          <Input
-            label="Senha*"
-            value={senha}
-             onChangeText={(text) => {
-              setSenha(text);
-              setFieldErrors((prev) => ({ ...prev, senha: "" }));
-            }}
-            secureTextEntry={!showPassword}
-            rightIcon={showPassword ? "eye-off-outline" : "eye-outline"}
-            onPressRightIcon={() => setShowPassword((prev) => !prev)}
-            
-            error={fieldErrors.senha}
-          />
+          <View>
+            <Input
+              label="Senha*"
+              value={senha}
+              onChangeText={(text) => {
+                setSenha(text);
+                setFieldErrors((prev) => ({ ...prev, senha: "" }));
+              }}
+              secureTextEntry={!showPassword}
+              rightIcon={showPassword ? "eye-off-outline" : "eye-outline"}
+              onPressRightIcon={() => setShowPassword((prev) => !prev)}
+              error={fieldErrors.senha}
+            />
+
+            <View style={styles.passwordRequirements}>
+              {passwordRequirements.map((requirement) => (
+                <Text
+                  key={requirement.label}
+                  style={[
+                    styles.passwordRequirementText,
+                    requirement.isValid
+                      ? styles.passwordRequirementValid
+                      : styles.passwordRequirementInvalid,
+                  ]}
+                >
+                  {requirement.isValid ? "✓" : "✕"} {requirement.label}
+                </Text>
+              ))}
+            </View>
+          </View>
 
           <View style={styles.rowInputs}>
             {Platform.OS === "web" ? (
-  <View style={{ width: "48%" }}>
-    <Text>Data de nascimento*</Text>
-    <input
-      type="date"
-       placeholder="Selecione"
-      style={{
-        padding: 10,
-        borderRadius: 6,
-        border: "1px solid #ccc",
-        marginTop: 4,
-      }}
-      onChange={(e) => {
-         if (!e.target.value) {
-          setBirthDate(null);
-          return;
-        }
-        const date = new Date(e.target.value);
-        setBirthDate(date);
-        setFieldErrors((prev) => ({ ...prev, birthDate: "" }));
-      }}
-    />
-    {fieldErrors.birthDate && (
-      <Text style={{ color: "red" }}>{fieldErrors.birthDate}</Text>
-    )}
-  </View>
-) : (
-  <DateInput
-    label="Data de nascimento*"
-    value={birthDate}
-    onChange={(date: Date) => {
-      setBirthDate(date);
-      setFieldErrors((prev) => ({ ...prev, birthDate: "" }));
-    }}
-    width="48%"
-    error={fieldErrors.birthDate}
-  />
-)}
+              <View style={{ width: "48%" }}>
+                <Text>Data de nascimento*</Text>
+                <input
+                  type="date"
+                  min="1900-01-01"
+                  placeholder="Selecione"
+                  style={{
+                    padding: 10,
+                    borderRadius: 6,
+                    border: "1px solid #ccc",
+                    marginTop: 4,
+                  }}
+                  onChange={(e) => {
+                    if (!e.target.value) {
+                      setBirthDate(null);
+                      return;
+                    }
+                    const date = new Date(e.target.value);
+                    setBirthDate(date);
+                    setFieldErrors((prev) => ({ ...prev, birthDate: "" }));
+                  }}
+                />
+                {fieldErrors.birthDate && (
+                  <Text style={{ color: "red" }}>{fieldErrors.birthDate}</Text>
+                )}
+              </View>
+            ) : (
+              <DateInput
+                label="Data de nascimento*"
+                value={birthDate}
+                onChange={(date: Date) => {
+                  setBirthDate(date);
+                  setFieldErrors((prev) => ({ ...prev, birthDate: "" }));
+                }}
+                width="48%"
+                minimumDate={new Date(1900, 0, 1)}
+                error={fieldErrors.birthDate}
+              />
+            )}
 
             <SelectInput
               label="Gênero*"
@@ -301,9 +342,9 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
                 setFieldErrors((prev) => ({ ...prev, gender: "" }));
               }}
               width="48%"
-               error={fieldErrors.gender}
+              error={fieldErrors.gender}
               options={[
-                 { label: "Selecione", value: "" },
+                { label: "Selecione", value: "", enabled: false },
                 { label: "Masculino", value: "m" },
                 { label: "Feminino", value: "f" },
                 { label: "Não-binario", value: "b" },
@@ -322,8 +363,6 @@ if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
             options={estados}
             error={fieldErrors.estado}
           />
-
-
 
           <View style={styles.buttonarea}>
             <Button onPress={handleSubmit}>
@@ -363,11 +402,32 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-   privacyLink: {
+  privacyLink: {
     color: "#007AFF",
     textDecorationLine: "underline",
     marginTop: 8,
     textAlign: "center",
+  },
+
+  passwordRequirements: {
+    width: "100%",
+    marginTop: -2,
+    marginBottom: 4,
+  },
+
+  passwordRequirementText: {
+    color: "#777",
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  passwordRequirementValid: {
+    color: "#168821",
+    fontWeight: "600",
+  },
+
+  passwordRequirementInvalid: {
+    color: "#C62828",
   },
 
   buttonarea: {
