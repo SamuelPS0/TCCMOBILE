@@ -9,7 +9,7 @@ interface ISelectProps {
   icon?: string;
   selectedValue: string;
   onValueChange: (value: string) => void;
-  options: { label: string; value: string }[];
+  options: { label: string; value: string; enabled?: boolean }[];
   width?: number | string;
   enabled?: boolean;
 
@@ -44,7 +44,12 @@ export const SelectInput = ({
           enabled={enabled}
         >
           {options.map((opt) => (
-            <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
+            <Picker.Item
+              key={opt.value}
+              label={opt.label}
+              value={opt.value}
+              enabled={opt.enabled ?? true}
+            />
           ))}
         </Picker>
       </View>

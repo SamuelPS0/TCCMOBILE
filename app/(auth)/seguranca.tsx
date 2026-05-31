@@ -25,10 +25,10 @@ export default function Seguranca() {
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-const normalizeSecurityAnswer = (value = "") =>
-  String(value ?? "")
-    .toLowerCase()
-    .replace(/\s/g, "");
+  const normalizeSecurityAnswer = (value = "") =>
+    String(value ?? "")
+      .toLowerCase()
+      .replace(/\s/g, "");
 
   const handleContinue = async () => {
     if (loading) return;
@@ -71,24 +71,23 @@ const normalizeSecurityAnswer = (value = "") =>
         rawGender === "m"
           ? "Masculino"
           : rawGender === "f"
-          ? "Feminino"
-          : rawGender === "o"
-          ? "Outro"
-          : "Não informado";
+            ? "Feminino"
+            : rawGender === "o"
+              ? "Outro"
+              : "Não informado";
 
-const chave1Normalizada = normalizeSecurityAnswer(chave1);
-const chave2Normalizada = normalizeSecurityAnswer(chave2);
+      const chave1Normalizada = normalizeSecurityAnswer(chave1);
+      const chave2Normalizada = normalizeSecurityAnswer(chave2);
 
-
-const payload = {
-  nome,
-  email,
-  senha,
-  nivelAcesso: "PRESTADOR",
-  statusUsuario: true,
-  ps_01: chave1Normalizada,
-  ps_02: chave2Normalizada,
-};
+      const payload = {
+        nome,
+        email,
+        senha,
+        nivelAcesso: "PRESTADOR",
+        statusUsuario: true,
+        ps_01: chave1Normalizada,
+        ps_02: chave2Normalizada,
+      };
 
       const response = await globalapi.post("Usuario", payload);
 
@@ -184,9 +183,7 @@ const payload = {
                 Li e aceito os Termos de Uso e a{" "}
                 <Text
                   style={{ color: "#007AFF", fontWeight: "500" }}
-                  onPress={() =>
-                    router.push("/(auth)/politica-privacidade")
-                  }
+                  onPress={() => router.push("/(auth)/politica-privacidade")}
                 >
                   Política de Privacidade
                 </Text>
