@@ -314,8 +314,8 @@ if (erro) return;
         bairro,
         cidade: municipio,
         uf: estado,
-        statusPrestador: "EM ANALISE",
-        status_prestador: "EM ANALISE",
+        statusPrestador: "EM_ANALISE",
+        status_prestador: "EM_ANALISE",
       };
 
       console.log("PRESTADOR:", prestadorPayload);
@@ -346,14 +346,14 @@ if (erro) return;
         .trim()
         .toUpperCase();
 
-      if (statusSalvo !== "EM ANALISE") {
+      if (statusSalvo !== "EM_ANALISE") {
         await saveWithFallback({
           method: "put",
           endpoints: [`prestador/${prestadorId}`, `Prestador/${prestadorId}`],
           payload: {
             ...prestadorPayload,
-            statusPrestador: "EM ANALISE",
-            status_prestador: "EM ANALISE",
+            statusPrestador: "EM_ANALISE",
+            status_prestador: "EM_ANALISE",
           },
         });
       }
