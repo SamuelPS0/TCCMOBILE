@@ -134,6 +134,8 @@ const styles = StyleSheet.create({
   },
   background: {
     flex: 1,
+    width: "100%",
+    height: "auto"
   },
   buttons: {
     width: "90%",
