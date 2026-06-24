@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -34,6 +35,10 @@ type ContatoItem = {
   tipo: string;
   valor: string;
 };
+
+function logWorkPayload(context: string, payload: Record<string, any>) {
+  console.log(`[WORKINFO] ${context}`, sanitizeForLog(payload));
+}
 
 function parseTipoContato(value: any) {
   const clean = String(value || "").toLowerCase();
@@ -111,11 +116,11 @@ export default function Workinfo() {
 
   const [prestadorId, setPrestadorId] = useState<number | null>(null);
   const [servicoId, setServicoId] = useState<number | null>(null);
- const [statusPrestador, setStatusPrestador] = useState("EM ANALISE");
+  const [statusPrestador, setStatusPrestador] = useState("EM ANALISE");
 
   const genderOptions = useMemo(
     () => [
-      { label: "Selecione...", value: "" },
+      { label: "Selecione...", value: "", enabled: false },
       { label: "Masculino", value: "Masculino" },
       { label: "Feminino", value: "Feminino" },
       { label: "Outro", value: "Outro" },
@@ -224,7 +229,9 @@ export default function Workinfo() {
 
         setPrestadorId(prestador.id);
         setStatusPrestador(
-          prestador?.statusPrestador ?? prestador?.status_prestador ?? "EM ANALISE",
+          prestador?.statusPrestador ??
+            prestador?.status_prestador ??
+            "EM ANALISE",
         );
 
         const [servicos, contatoRes] = await Promise.all([
@@ -280,8 +287,9 @@ export default function Workinfo() {
         if (servicoAtivo?.foto) {
           setEventImage({ uri: normalizeImageUri(servicoAtivo.foto) });
         }
-        if (user?.foto) {
-          setProfileImage({ uri: normalizeImageUri(user.foto) });
+        const fotoUsuario = user?.foto || prestador?.usuario?.foto;
+        if (fotoUsuario) {
+          setProfileImage({ uri: normalizeImageUri(fotoUsuario) });
         }
       } catch (error: any) {
         Alert.alert(
@@ -310,6 +318,14 @@ export default function Workinfo() {
 
     if (!categoria) {
       Alert.alert("Validação", "Categoria é obrigatória.");
+      return;
+    }
+
+    if (cep.replace(/\D/g, "").length !== 8 || !estado || !municipio) {
+      Alert.alert(
+        "Validação",
+        "Informe um CEP válido para carregar Estado e Município.",
+      );
       return;
     }
 
@@ -346,6 +362,19 @@ export default function Workinfo() {
         statusPrestador,
       };
 
+      logWorkPayload("payload Prestador -> PUT prestador/{id}", {
+        endpoint: `prestador/${prestadorId}`,
+        camposEnviados: Object.keys(prestadorPayload),
+        camposEnderecoDigitaveis: [
+          "logradouro",
+          "bairro",
+          "numeroResidencial",
+          "complemento",
+        ],
+        camposEnderecoViaCep: ["cep", "cidade", "uf"],
+        ...prestadorPayload,
+      });
+
       await saveWithFallback({
         method: "put",
         endpoints: [`prestador/${prestadorId}`, `Prestador/${prestadorId}`],
@@ -360,6 +389,13 @@ export default function Workinfo() {
         categoriaId: Number(categoria),
         foto: eventImage?.base64 || null,
       };
+
+      logWorkPayload("payload Servico -> salvar serviço", {
+        endpoint: servicoId ? `servico/${servicoId}` : "servico",
+        metodo: servicoId ? "put" : "post",
+        camposEnviados: Object.keys(servicoPayload),
+        ...servicoPayload,
+      });
 
       if (servicoId) {
         await saveWithFallback({
@@ -382,17 +418,21 @@ export default function Workinfo() {
       if (contatosParaEnviar.length > 0) {
         const contatosComResultado = await Promise.allSettled(
           contatosParaEnviar.map(async (contato, index) => {
-       const contatoPayload = {
-  prestadorId,
-  tipoContato: contato.tipo,
-  link: normalizeContactLink(contato.tipo, contato.valor),
-  statusContato: "ATIVO",
-};
+            const contatoPayload = {
+              prestadorId,
+              tipoContato: contato.tipo,
+              link: normalizeContactLink(contato.tipo, contato.valor),
+              statusContato: "ATIVO",
+            };
 
-            console.log(
-              `[WORKINFO CONTATO ${index + 1}] payload:`,
-              sanitizeForLog(contatoPayload),
-            );
+            logWorkPayload(`payload Contato ${index + 1} -> salvar contato`, {
+              endpoint: contato.id ? `contato/${contato.id}` : "contato",
+              metodo: contato.id ? "put" : "post",
+              camposEnviados: Object.keys(contatoPayload),
+              valorOriginal: contato.valor,
+              valorNormalizado: contatoPayload.link,
+              ...contatoPayload,
+            });
 
             if (contato.id) {
               const response = await saveWithFallback({
@@ -424,9 +464,18 @@ export default function Workinfo() {
         }
       }
 
-      Alert.alert("Sucesso", "Informações profissionais atualizadas.");
-      router.replace("/(tabs)/perfil");
+      Alert.alert("Sucesso", "Informações profissionais atualizadas.", [
+        { text: "OK", onPress: () => router.replace("/(tabs)") },
+      ]);
     } catch (error: any) {
+      console.log("[WORKINFO] erro ao salvar", {
+        message: error?.message,
+        status: error?.response?.status,
+        url: error?.config?.url,
+        method: error?.config?.method,
+        data: sanitizeForLog(error?.response?.data),
+      });
+
       Alert.alert(
         "Erro",
         error?.response?.data?.message ||
@@ -462,6 +511,13 @@ export default function Workinfo() {
                 imageUri={profileImage?.uri || null}
                 onChangeImage={setProfileImage}
               />
+
+              {profileImage?.uri ? (
+                <Image
+                  source={{ uri: profileImage.uri }}
+                  style={styles.profilePreview}
+                />
+              ) : null}
             </View>
 
             <Input
@@ -542,17 +598,11 @@ export default function Workinfo() {
             {erroCep && <Text style={styles.errorCep}>{erroCep}</Text>}
 
             <View style={styles.rowInputs}>
-              <SelectInput
+              <Input
                 label="Estado"
-                selectedValue={estado}
-                onValueChange={setEstado}
-                options={[
-                  { label: "Selecione...", value: "" },
-                  { label: "SP - São Paulo", value: "SP" },
-                  { label: "RJ - Rio de Janeiro", value: "RJ" },
-                  { label: "MG - Minas Gerais", value: "MG" },
-                  { label: "PR - Paraná", value: "PR" },
-                ]}
+                value={estado}
+                onChangeText={() => {}}
+                editable={false}
                 width={"31%"}
               />
 
@@ -560,7 +610,8 @@ export default function Workinfo() {
                 <Input
                   label="Cidade"
                   value={municipio}
-                  onChangeText={setMunicipio}
+                  onChangeText={() => {}}
+                  editable={false}
                 />
               </View>
             </View>
@@ -654,6 +705,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
     marginTop: 10,
+    gap: 12,
+  },
+  profilePreview: {
+    width: "100%",
+    height: 180,
+    borderRadius: 12,
+    resizeMode: "cover",
   },
   rowInputs: {
     flexDirection: "row",

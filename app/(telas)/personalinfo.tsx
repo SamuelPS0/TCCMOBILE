@@ -11,7 +11,7 @@ import {
 } from "react-native";
 
 import React from "react";
-import { globalapi } from "../../assets/api/globalapi";
+import { globalapi, sanitizeForLog } from "../../assets/api/globalapi";
 import BottomNav from "../../assets/components/BottomNav";
 import { Button } from "../../assets/components/Button";
 import { DateInput } from "../../assets/components/DateInput";
@@ -69,19 +69,39 @@ function normalizeGender(value: any) {
   return "";
 }
 
+function logPayloadContext(context: string, payload: Record<string, any>) {
+  const safePayload = {
+    ...payload,
+    senha: payload.senha ? "[senha-preservada]" : payload.senha,
+  };
+
+  console.log(`[PERSONALINFO] ${context}`, sanitizeForLog(safePayload));
+}
+
 async function upsertUsuario(userId: number, payload: Record<string, any>) {
-  const endpoints = [`Usuario/${userId}`, `usuario/${userId}`];
+  const usuarioRes = await globalapi.get(`Usuario/${userId}`);
+  const usuarioAtual = usuarioRes.data || {};
 
-  for (const endpoint of endpoints) {
-    try {
-      const response = await globalapi.put(endpoint, payload);
-      return response.data;
-    } catch (error: any) {
-      if (error?.response?.status !== 404) throw error;
-    }
-  }
+  const usuarioPayload = {
+    ...usuarioAtual,
+    nome: payload.nome ?? usuarioAtual.nome,
+    email: usuarioAtual.email,
+    senha: payload.senha ?? usuarioAtual.senha,
+    nivelAcesso: usuarioAtual.nivelAcesso,
+    ps_01: usuarioAtual.ps_01,
+    ps_02: usuarioAtual.ps_02,
+    foto: usuarioAtual.foto,
+    statusUsuario: usuarioAtual.statusUsuario,
+  };
 
-  throw new Error("ENDPOINT_USUARIO_UPDATE_NOT_FOUND");
+  logPayloadContext("payload Usuario -> PUT Usuario/{id}", {
+    endpoint: `Usuario/${userId}`,
+    camposEnviados: Object.keys(usuarioPayload),
+    ...usuarioPayload,
+  });
+
+  const response = await globalapi.put(`Usuario/${userId}`, usuarioPayload);
+  return response.data;
 }
 
 async function upsertPrestador(
@@ -230,14 +250,16 @@ export default function Personalinfo() {
     try {
       setLoading(true);
 
-      const usuarioPayload: Record<string, any> = {
-        nome: nomeTrim,
-        email: emailTrim,
-      };
-
+      const usuarioPayload: Record<string, any> = { nome: nomeTrim };
       if (senha.trim().length >= 6) {
         usuarioPayload.senha = senha.trim();
       }
+
+      console.log("[PERSONALINFO] campos Usuario preparados", {
+        destino: "Usuario",
+        campos: Object.keys(usuarioPayload),
+        atualizaSenha: Boolean(usuarioPayload.senha),
+      });
 
       await upsertUsuario(Number(user.id), usuarioPayload);
 
@@ -256,12 +278,27 @@ export default function Personalinfo() {
           uf: estado,
         };
 
+        logPayloadContext("payload Prestador -> PUT prestador/{id}", {
+          endpoint: `prestador/${prestadorId}`,
+          camposEnviados: Object.keys(prestadorPayload),
+          ...prestadorPayload,
+        });
+
         await upsertPrestador(prestadorId, prestadorPayload);
       }
 
-      Alert.alert("Sucesso", "Informações pessoais atualizadas.");
-      router.push("/(telas)/workinfo");
+      Alert.alert("Sucesso", "Informações pessoais atualizadas.", [
+        { text: "OK", onPress: () => router.replace("/(tabs)") },
+      ]);
     } catch (error: any) {
+      console.log("[PERSONALINFO] erro ao salvar", {
+        message: error?.message,
+        status: error?.response?.status,
+        url: error?.config?.url,
+        method: error?.config?.method,
+        data: sanitizeForLog(error?.response?.data),
+      });
+
       Alert.alert(
         "Erro",
         error?.response?.data?.message || "Não foi possível salvar os dados.",
@@ -318,6 +355,7 @@ export default function Personalinfo() {
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
+                editable={false}
               />
 
               <Input
@@ -341,7 +379,7 @@ export default function Personalinfo() {
                   onValueChange={setGender}
                   width="48%"
                   options={[
-                    { label: "Selecione...", value: "" },
+                    { label: "Selecione...", value: "", enabled: false },
                     { label: "Masculino", value: "m" },
                     { label: "Feminino", value: "f" },
                     { label: "Outro", value: "o" },
