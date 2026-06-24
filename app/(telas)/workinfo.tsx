@@ -36,6 +36,10 @@ type ContatoItem = {
   valor: string;
 };
 
+function logWorkPayload(context: string, payload: Record<string, any>) {
+  console.log(`[WORKINFO] ${context}`, sanitizeForLog(payload));
+}
+
 function parseTipoContato(value: any) {
   const clean = String(value || "").toLowerCase();
 
@@ -358,6 +362,19 @@ export default function Workinfo() {
         statusPrestador,
       };
 
+      logWorkPayload("payload Prestador -> PUT prestador/{id}", {
+        endpoint: `prestador/${prestadorId}`,
+        camposEnviados: Object.keys(prestadorPayload),
+        camposEnderecoDigitaveis: [
+          "logradouro",
+          "bairro",
+          "numeroResidencial",
+          "complemento",
+        ],
+        camposEnderecoViaCep: ["cep", "cidade", "uf"],
+        ...prestadorPayload,
+      });
+
       await saveWithFallback({
         method: "put",
         endpoints: [`prestador/${prestadorId}`, `Prestador/${prestadorId}`],
@@ -372,6 +389,13 @@ export default function Workinfo() {
         categoriaId: Number(categoria),
         foto: eventImage?.base64 || null,
       };
+
+      logWorkPayload("payload Servico -> salvar serviço", {
+        endpoint: servicoId ? `servico/${servicoId}` : "servico",
+        metodo: servicoId ? "put" : "post",
+        camposEnviados: Object.keys(servicoPayload),
+        ...servicoPayload,
+      });
 
       if (servicoId) {
         await saveWithFallback({
@@ -401,10 +425,14 @@ export default function Workinfo() {
               statusContato: "ATIVO",
             };
 
-            console.log(
-              `[WORKINFO CONTATO ${index + 1}] payload:`,
-              sanitizeForLog(contatoPayload),
-            );
+            logWorkPayload(`payload Contato ${index + 1} -> salvar contato`, {
+              endpoint: contato.id ? `contato/${contato.id}` : "contato",
+              metodo: contato.id ? "put" : "post",
+              camposEnviados: Object.keys(contatoPayload),
+              valorOriginal: contato.valor,
+              valorNormalizado: contatoPayload.link,
+              ...contatoPayload,
+            });
 
             if (contato.id) {
               const response = await saveWithFallback({
@@ -440,6 +468,14 @@ export default function Workinfo() {
         { text: "OK", onPress: () => router.replace("/(tabs)") },
       ]);
     } catch (error: any) {
+      console.log("[WORKINFO] erro ao salvar", {
+        message: error?.message,
+        status: error?.response?.status,
+        url: error?.config?.url,
+        method: error?.config?.method,
+        data: sanitizeForLog(error?.response?.data),
+      });
+
       Alert.alert(
         "Erro",
         error?.response?.data?.message ||
