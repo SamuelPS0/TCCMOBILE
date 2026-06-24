@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -392,9 +393,6 @@ export default function Workinfo() {
         endpoint: servicoId ? `servico/${servicoId}` : "servico",
         metodo: servicoId ? "put" : "post",
         camposEnviados: Object.keys(servicoPayload),
-        observacaoFoto: eventImage?.base64
-          ? "Nova foto enviada em base64."
-          : "Sem nova foto; backend deve manter a foto atual em atualização.",
         ...servicoPayload,
       });
 
@@ -512,6 +510,13 @@ export default function Workinfo() {
                 imageUri={profileImage?.uri || null}
                 onChangeImage={setProfileImage}
               />
+
+              {profileImage?.uri ? (
+                <Image
+                  source={{ uri: profileImage.uri }}
+                  style={styles.profilePreview}
+                />
+              ) : null}
             </View>
 
             <Input
@@ -700,6 +705,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: 10,
     gap: 12,
+  },
+  profilePreview: {
+    width: "100%",
+    height: 180,
+    borderRadius: 12,
+    resizeMode: "cover",
   },
   rowInputs: {
     flexDirection: "row",

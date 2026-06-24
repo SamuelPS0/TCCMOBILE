@@ -90,26 +90,30 @@ function logPayloadContext(context: string, payload: Record<string, any>) {
 }
 
 async function upsertUsuario(userId: number, payload: Record<string, any>) {
-  const usuarioRes = await globalapi.get(`Usuario/${userId}`);
-  const usuarioAtual = usuarioRes.data || {};
+  const payloadComId = { id: userId, ...payload };
+  const attempts = [
+    { method: "put", endpoint: `Usuario/${userId}`, body: payload },
+    { method: "put", endpoint: `usuario/${userId}`, body: payload },
+    { method: "patch", endpoint: `Usuario/${userId}`, body: payload },
+    { method: "patch", endpoint: `usuario/${userId}`, body: payload },
+    { method: "put", endpoint: "Usuario", body: payloadComId },
+    { method: "put", endpoint: "usuario", body: payloadComId },
+    { method: "patch", endpoint: "Usuario", body: payloadComId },
+    { method: "patch", endpoint: "usuario", body: payloadComId },
+  ];
 
-  const usuarioPayload = {
-    ...usuarioAtual,
-    nome: payload.nome ?? usuarioAtual.nome,
-    email: usuarioAtual.email,
-    senha: payload.senha ?? usuarioAtual.senha,
-    nivelAcesso: usuarioAtual.nivelAcesso,
-    ps_01: usuarioAtual.ps_01,
-    ps_02: usuarioAtual.ps_02,
-    foto: usuarioAtual.foto,
-    statusUsuario: usuarioAtual.statusUsuario,
-  };
-
-  logPayloadContext("payload Usuario -> PUT Usuario/{id}", {
-    endpoint: `Usuario/${userId}`,
-    camposEnviados: Object.keys(usuarioPayload),
-    ...usuarioPayload,
-  });
+  for (const attempt of attempts) {
+    try {
+      const response = await globalapi.request({
+        method: attempt.method,
+        url: attempt.endpoint,
+        data: attempt.body,
+      });
+      return response.data;
+    } catch (error: any) {
+      if (![404, 405].includes(error?.response?.status)) throw error;
+    }
+  }
 
   const response = await globalapi.put(`Usuario/${userId}`, usuarioPayload);
   return response.data;
@@ -269,7 +273,10 @@ export default function Personalinfo() {
     try {
       setLoading(true);
 
-      const usuarioPayload: Record<string, any> = { nome: nomeTrim };
+      const usuarioPayload: Record<string, any> = {
+        nome: nomeTrim,
+      };
+
       if (senha.trim().length >= 6) {
         usuarioPayload.senha = senha.trim();
       }
