@@ -232,7 +232,6 @@ export default function Personalinfo() {
 
       const usuarioPayload: Record<string, any> = {
         nome: nomeTrim,
-        email: emailTrim,
       };
 
       if (senha.trim().length >= 6) {
@@ -259,8 +258,9 @@ export default function Personalinfo() {
         await upsertPrestador(prestadorId, prestadorPayload);
       }
 
-      Alert.alert("Sucesso", "Informações pessoais atualizadas.");
-      router.push("/(telas)/workinfo");
+      Alert.alert("Sucesso", "Informações pessoais atualizadas.", [
+        { text: "OK", onPress: () => router.replace("/(tabs)") },
+      ]);
     } catch (error: any) {
       Alert.alert(
         "Erro",
@@ -318,6 +318,7 @@ export default function Personalinfo() {
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
+                editable={false}
               />
 
               <Input
@@ -341,7 +342,7 @@ export default function Personalinfo() {
                   onValueChange={setGender}
                   width="48%"
                   options={[
-                    { label: "Selecione...", value: "" },
+                    { label: "Selecione...", value: "", enabled: false },
                     { label: "Masculino", value: "m" },
                     { label: "Feminino", value: "f" },
                     { label: "Outro", value: "o" },
