@@ -70,14 +70,28 @@ function normalizeGender(value: any) {
 }
 
 async function upsertUsuario(userId: number, payload: Record<string, any>) {
-  const endpoints = [`Usuario/${userId}`, `usuario/${userId}`];
+  const payloadComId = { id: userId, ...payload };
+  const attempts = [
+    { method: "put", endpoint: `Usuario/${userId}`, body: payload },
+    { method: "put", endpoint: `usuario/${userId}`, body: payload },
+    { method: "patch", endpoint: `Usuario/${userId}`, body: payload },
+    { method: "patch", endpoint: `usuario/${userId}`, body: payload },
+    { method: "put", endpoint: "Usuario", body: payloadComId },
+    { method: "put", endpoint: "usuario", body: payloadComId },
+    { method: "patch", endpoint: "Usuario", body: payloadComId },
+    { method: "patch", endpoint: "usuario", body: payloadComId },
+  ];
 
-  for (const endpoint of endpoints) {
+  for (const attempt of attempts) {
     try {
-      const response = await globalapi.put(endpoint, payload);
+      const response = await globalapi.request({
+        method: attempt.method,
+        url: attempt.endpoint,
+        data: attempt.body,
+      });
       return response.data;
     } catch (error: any) {
-      if (error?.response?.status !== 404) throw error;
+      if (![404, 405].includes(error?.response?.status)) throw error;
     }
   }
 
