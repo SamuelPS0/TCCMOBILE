@@ -1,17 +1,14 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
-import { normalizeContactLink } from "../../src/utils/contactLinks";
-import React from "react";
 import { buscarCep } from "../../assets/api/apiviacep";
 import { globalapi, sanitizeForLog } from "../../assets/api/globalapi";
 import BottomNav from "../../assets/components/BottomNav";
@@ -29,6 +26,7 @@ import {
   normalizeImageUri,
   updateUsuarioFoto,
 } from "../../src/services/prestadorService";
+import { normalizeContactLink } from "../../src/utils/contactLinks";
 
 type ContatoItem = {
   id?: number;
@@ -510,13 +508,6 @@ export default function Workinfo() {
                 imageUri={profileImage?.uri || null}
                 onChangeImage={setProfileImage}
               />
-
-              {profileImage?.uri ? (
-                <Image
-                  source={{ uri: profileImage.uri }}
-                  style={styles.profilePreview}
-                />
-              ) : null}
             </View>
 
             <Input
