@@ -382,33 +382,39 @@ export default function Workinfo() {
       });
 
       const servicoPayload = {
-        ...(servicoId ? { id: servicoId } : {}),
         nome,
         descricao,
-        statusServico: "ATIVO",
         prestadorId,
         categoriaId: Number(categoria),
-        foto: eventImage?.base64 || null,
+        foto: eventImage?.base64 || undefined,
       };
 
-      logWorkPayload("payload Servico -> POST servico", {
-        endpoint: "servico",
-        metodo: "post",
-        motivo: servicoId
-          ? "Backend retornou 405 para PUT /servico/{id}; envia id no POST para atualizar via save."
-          : "Novo serviço sem id.",
+      logWorkPayload("payload Servico -> salvar serviço", {
+        endpoint: servicoId ? `servico/${servicoId}` : "servico",
+        metodo: servicoId ? "put" : "post",
         camposEnviados: Object.keys(servicoPayload),
+        observacaoFoto: eventImage?.base64
+          ? "Nova foto enviada em base64."
+          : "Sem nova foto; backend deve manter a foto atual em atualização.",
         ...servicoPayload,
       });
 
-      const servicoSalvo = await saveWithFallback({
-        method: "post",
-        endpoints: ["servico", "Servico"],
-        payload: servicoPayload,
-      });
+      if (servicoId) {
+        await saveWithFallback({
+          method: "put",
+          endpoints: [`servico/${servicoId}`, `Servico/${servicoId}`],
+          payload: servicoPayload,
+        });
+      } else {
+        const servicoSalvo = await saveWithFallback({
+          method: "post",
+          endpoints: ["servico", "Servico"],
+          payload: servicoPayload,
+        });
 
-      if (servicoSalvo?.id) {
-        setServicoId(servicoSalvo.id);
+        if (servicoSalvo?.id) {
+          setServicoId(servicoSalvo.id);
+        }
       }
 
       if (contatosParaEnviar.length > 0) {
