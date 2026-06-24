@@ -51,6 +51,17 @@ function maskPhone(value: string) {
   return digits.replace(/(\d{5})(\d+)/, "$1-$2");
 }
 
+function maskFullPhone(value: string) {
+  const digits = onlyDigits(value).slice(0, 11);
+
+  if (digits.length <= 2) return digits ? `(${digits}` : "";
+  if (digits.length <= 7) {
+    return digits.replace(/(\d{2})(\d+)/, "($1) $2");
+  }
+
+  return digits.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+}
+
 function asDate(value: any) {
   if (!value) return new Date(2000, 0, 1);
 
@@ -178,6 +189,14 @@ export default function Personalinfo() {
     [],
   );
 
+  const telefoneFormatado = maskFullPhone(telefoneDDD + onlyDigits(telefone));
+
+  function handleTelefoneCompletoChange(text: string) {
+    const digits = onlyDigits(text).slice(0, 11);
+    setTelefoneDDD(digits.slice(0, 2));
+    setTelefone(maskPhone(digits.slice(2)));
+  }
+
   useEffect(() => {
     async function loadData() {
       if (!user?.id) {
@@ -240,8 +259,8 @@ export default function Personalinfo() {
     if (!emailTrim || !emailTrim.includes("@")) errors.push("Email inválido");
     if (cpfLimpo.length !== 11) errors.push("CPF inválido");
     if (dddLimpo.length !== 2) errors.push("DDD inválido");
-    if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
-      errors.push("Telefone inválido");
+    if (telefoneLimpo.length !== 9) {
+      errors.push("Telefone deve estar no formato (XX) XXXXX-XXXX");
     }
     if (!gender) errors.push("Gênero é obrigatório");
     if (!estado) errors.push("Estado é obrigatório");
@@ -333,28 +352,19 @@ export default function Personalinfo() {
             <>
               <Input label="Nome*" value={nome} onChangeText={setNome} />
 
-              <View style={styles.rowInputs}>
-                <Input
-                  label="DDD*"
-                  value={telefoneDDD}
-                  onChangeText={(text) => setTelefoneDDD(maskDDD(text))}
-                  width="21%"
-                  keyboardType="numeric"
-                />
-                <Input
-                  label="Telefone*"
-                  value={telefone}
-                  onChangeText={(text) => setTelefone(maskPhone(text))}
-                  width="75%"
-                  keyboardType="numeric"
-                />
-              </View>
+              <Input
+                label="Telefone*"
+                value={telefoneFormatado}
+                onChangeText={handleTelefoneCompletoChange}
+                keyboardType="phone-pad"
+              />
 
               <Input
                 label="CPF*"
                 value={cpf}
-                onChangeText={(text) => setCpf(maskCPF(text))}
+                onChangeText={() => {}}
                 keyboardType="numeric"
+                editable={false}
               />
 
               <Input
