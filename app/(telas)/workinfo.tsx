@@ -384,10 +384,9 @@ export default function Workinfo() {
       const servicoPayload = {
         nome,
         descricao,
-        statusServico: "ATIVO",
         prestadorId,
         categoriaId: Number(categoria),
-        foto: eventImage?.base64 || null,
+        foto: eventImage?.base64 || undefined,
       };
 
       logWorkPayload("payload Servico -> salvar serviço", {
@@ -404,14 +403,14 @@ export default function Workinfo() {
           payload: servicoPayload,
         });
       } else {
-        const novoServico = await saveWithFallback({
+        const servicoSalvo = await saveWithFallback({
           method: "post",
           endpoints: ["servico", "Servico"],
           payload: servicoPayload,
         });
 
-        if (novoServico?.id) {
-          setServicoId(novoServico.id);
+        if (servicoSalvo?.id) {
+          setServicoId(servicoSalvo.id);
         }
       }
 
