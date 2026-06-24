@@ -393,9 +393,6 @@ export default function Workinfo() {
         endpoint: servicoId ? `servico/${servicoId}` : "servico",
         metodo: servicoId ? "put" : "post",
         camposEnviados: Object.keys(servicoPayload),
-        observacaoFoto: eventImage?.base64
-          ? "Nova foto enviada em base64."
-          : "Sem nova foto; backend deve manter a foto atual em atualização.",
         ...servicoPayload,
       });
 
