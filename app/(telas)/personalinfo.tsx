@@ -11,7 +11,7 @@ import {
 } from "react-native";
 
 import React from "react";
-import { globalapi } from "../../assets/api/globalapi";
+import { globalapi, sanitizeForLog } from "../../assets/api/globalapi";
 import BottomNav from "../../assets/components/BottomNav";
 import { Button } from "../../assets/components/Button";
 import { DateInput } from "../../assets/components/DateInput";
@@ -51,6 +51,17 @@ function maskPhone(value: string) {
   return digits.replace(/(\d{5})(\d+)/, "$1-$2");
 }
 
+function maskFullPhone(value: string) {
+  const digits = onlyDigits(value).slice(0, 11);
+
+  if (digits.length <= 2) return digits ? `(${digits}` : "";
+  if (digits.length <= 7) {
+    return digits.replace(/(\d{2})(\d+)/, "($1) $2");
+  }
+
+  return digits.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+}
+
 function asDate(value: any) {
   if (!value) return new Date(2000, 0, 1);
 
@@ -69,19 +80,39 @@ function normalizeGender(value: any) {
   return "";
 }
 
+function logPayloadContext(context: string, payload: Record<string, any>) {
+  const safePayload = {
+    ...payload,
+    senha: payload.senha ? "[senha-preservada]" : payload.senha,
+  };
+
+  console.log(`[PERSONALINFO] ${context}`, sanitizeForLog(safePayload));
+}
+
 async function upsertUsuario(userId: number, payload: Record<string, any>) {
-  const endpoints = [`Usuario/${userId}`, `usuario/${userId}`];
+  const usuarioRes = await globalapi.get(`Usuario/${userId}`);
+  const usuarioAtual = usuarioRes.data || {};
 
-  for (const endpoint of endpoints) {
-    try {
-      const response = await globalapi.put(endpoint, payload);
-      return response.data;
-    } catch (error: any) {
-      if (error?.response?.status !== 404) throw error;
-    }
-  }
+  const usuarioPayload = {
+    ...usuarioAtual,
+    nome: payload.nome ?? usuarioAtual.nome,
+    email: usuarioAtual.email,
+    senha: payload.senha ?? usuarioAtual.senha,
+    nivelAcesso: usuarioAtual.nivelAcesso,
+    ps_01: usuarioAtual.ps_01,
+    ps_02: usuarioAtual.ps_02,
+    foto: usuarioAtual.foto,
+    statusUsuario: usuarioAtual.statusUsuario,
+  };
 
-  throw new Error("ENDPOINT_USUARIO_UPDATE_NOT_FOUND");
+  logPayloadContext("payload Usuario -> PUT Usuario/{id}", {
+    endpoint: `Usuario/${userId}`,
+    camposEnviados: Object.keys(usuarioPayload),
+    ...usuarioPayload,
+  });
+
+  const response = await globalapi.put(`Usuario/${userId}`, usuarioPayload);
+  return response.data;
 }
 
 async function upsertPrestador(
@@ -154,6 +185,14 @@ export default function Personalinfo() {
     [],
   );
 
+  const telefoneFormatado = maskFullPhone(telefoneDDD + onlyDigits(telefone));
+
+  function handleTelefoneCompletoChange(text: string) {
+    const digits = onlyDigits(text).slice(0, 11);
+    setTelefoneDDD(digits.slice(0, 2));
+    setTelefone(maskPhone(digits.slice(2)));
+  }
+
   useEffect(() => {
     async function loadData() {
       if (!user?.id) {
@@ -216,8 +255,8 @@ export default function Personalinfo() {
     if (!emailTrim || !emailTrim.includes("@")) errors.push("Email inválido");
     if (cpfLimpo.length !== 11) errors.push("CPF inválido");
     if (dddLimpo.length !== 2) errors.push("DDD inválido");
-    if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
-      errors.push("Telefone inválido");
+    if (telefoneLimpo.length !== 9) {
+      errors.push("Telefone deve estar no formato (XX) XXXXX-XXXX");
     }
     if (!gender) errors.push("Gênero é obrigatório");
     if (!estado) errors.push("Estado é obrigatório");
@@ -230,14 +269,16 @@ export default function Personalinfo() {
     try {
       setLoading(true);
 
-      const usuarioPayload: Record<string, any> = {
-        nome: nomeTrim,
-        email: emailTrim,
-      };
-
+      const usuarioPayload: Record<string, any> = { nome: nomeTrim };
       if (senha.trim().length >= 6) {
         usuarioPayload.senha = senha.trim();
       }
+
+      console.log("[PERSONALINFO] campos Usuario preparados", {
+        destino: "Usuario",
+        campos: Object.keys(usuarioPayload),
+        atualizaSenha: Boolean(usuarioPayload.senha),
+      });
 
       await upsertUsuario(Number(user.id), usuarioPayload);
 
@@ -256,12 +297,27 @@ export default function Personalinfo() {
           uf: estado,
         };
 
+        logPayloadContext("payload Prestador -> PUT prestador/{id}", {
+          endpoint: `prestador/${prestadorId}`,
+          camposEnviados: Object.keys(prestadorPayload),
+          ...prestadorPayload,
+        });
+
         await upsertPrestador(prestadorId, prestadorPayload);
       }
 
-      Alert.alert("Sucesso", "Informações pessoais atualizadas.");
-      router.push("/(telas)/workinfo");
+      Alert.alert("Sucesso", "Informações pessoais atualizadas.", [
+        { text: "OK", onPress: () => router.replace("/(tabs)") },
+      ]);
     } catch (error: any) {
+      console.log("[PERSONALINFO] erro ao salvar", {
+        message: error?.message,
+        status: error?.response?.status,
+        url: error?.config?.url,
+        method: error?.config?.method,
+        data: sanitizeForLog(error?.response?.data),
+      });
+
       Alert.alert(
         "Erro",
         error?.response?.data?.message || "Não foi possível salvar os dados.",
@@ -289,28 +345,19 @@ export default function Personalinfo() {
             <>
               <Input label="Nome*" value={nome} onChangeText={setNome} />
 
-              <View style={styles.rowInputs}>
-                <Input
-                  label="DDD*"
-                  value={telefoneDDD}
-                  onChangeText={(text) => setTelefoneDDD(maskDDD(text))}
-                  width="21%"
-                  keyboardType="numeric"
-                />
-                <Input
-                  label="Telefone*"
-                  value={telefone}
-                  onChangeText={(text) => setTelefone(maskPhone(text))}
-                  width="75%"
-                  keyboardType="numeric"
-                />
-              </View>
+              <Input
+                label="Telefone*"
+                value={telefoneFormatado}
+                onChangeText={handleTelefoneCompletoChange}
+                keyboardType="phone-pad"
+              />
 
               <Input
                 label="CPF*"
                 value={cpf}
-                onChangeText={(text) => setCpf(maskCPF(text))}
+                onChangeText={() => {}}
                 keyboardType="numeric"
+                editable={false}
               />
 
               <Input
@@ -318,6 +365,7 @@ export default function Personalinfo() {
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
+                editable={false}
               />
 
               <Input
@@ -341,7 +389,7 @@ export default function Personalinfo() {
                   onValueChange={setGender}
                   width="48%"
                   options={[
-                    { label: "Selecione...", value: "" },
+                    { label: "Selecione...", value: "", enabled: false },
                     { label: "Masculino", value: "m" },
                     { label: "Feminino", value: "f" },
                     { label: "Outro", value: "o" },
