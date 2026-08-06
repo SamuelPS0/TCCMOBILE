@@ -1,16 +1,26 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useState } from "react";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-import React from "react";
-import { Platform } from "react-native";
+import { globalapi } from "../../assets/api/globalapi";
 import { Button } from "../../assets/components/Button";
+import { CheckboxInput } from "../../assets/components/CheckboxInput";
 import { DateInput } from "../../assets/components/DateInput";
 import { Header } from "../../assets/components/Header";
 import { Input } from "../../assets/components/Input";
 import { SelectInput } from "../../assets/components/SelectInput";
 import { typography } from "../../assets/globalstyles/fonts";
+import { useAuth } from "../../src/context/AuthContext";
+import { savePendingPrestadorProfile } from "../../src/storage/onboardingStorage";
 
 // ================== MÁSCARAS ==================
 function onlyDigits(value: string) {
@@ -59,6 +69,9 @@ function isStrongPassword(value: string) {
 }
 
 export default function Cadastro() {
+  const router = useRouter();
+  const { login } = useAuth();
+
   const [nome, setNome] = useState("");
   const [telefoneDDD, setTelefoneDDD] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -69,9 +82,13 @@ export default function Cadastro() {
   const [gender, setGender] = useState("");
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [estado, setEstado] = useState("");
+
+  const [acceptTerms1, setAcceptTerms1] = useState(false);
+  const [acceptTerms2, setAcceptTerms2] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const router = useRouter();
   const passwordRequirements = getPasswordRequirements(senha);
 
   function formatDate(date: Date) {
@@ -100,6 +117,8 @@ export default function Cadastro() {
   }
 
   const handleSubmit = async () => {
+    if (loading) return;
+
     const errors: Record<string, string> = {};
 
     const nomeTrim = nome.trim();
@@ -146,29 +165,87 @@ export default function Cadastro() {
     } else if (!isAtLeast18YearsOld(birthDate)) {
       errors.birthDate = "Você precisa ter 18 anos ou mais";
     }
+
     if (!gender)
       errors.gender = "O campo gênero deve ser preenchido obrigatoriamente";
+
     if (!estado)
       errors.estado = "O campo estado deve ser preenchido obrigatoriamente";
+
+    if (!acceptTerms1) {
+      errors.terms1 = "Você precisa aceitar os termos";
+    }
+
+    if (!acceptTerms2) {
+      errors.terms2 = "Você precisa aceitar os termos";
+    }
 
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       return;
     }
 
-    router.push({
-      pathname: "/(auth)/seguranca",
-      params: {
+    try {
+      setLoading(true);
+
+      const normalizedGender =
+        gender === "m"
+          ? "Masculino"
+          : gender === "f"
+            ? "Feminino"
+            : gender === "o"
+              ? "Outro"
+              : "Não informado";
+
+      const payload = {
+        nome: nomeTrim,
+        username: emailTrim,
+        password: senha,
+        nivelAcesso: "PRESTADOR",
+      };
+
+      const response = await globalapi.post("usuario/create", payload);
+      const userId = response?.data?.id;
+
+      if (!userId) {
+        throw new Error("ID do usuário não retornado");
+      }
+
+      await savePendingPrestadorProfile({
+        userId: String(userId),
+        cpf: cpfLimpo,
         nome: nomeTrim,
         email: emailTrim,
-        senha,
-        cpf: cpfLimpo,
         telefone: telefoneCompleto,
-        gender,
-        estado,
         birthDate: formatDate(birthDate!),
-      },
-    });
+        gender: normalizedGender,
+        estado,
+      });
+
+      const userData = {
+        id: userId,
+        nome: nomeTrim,
+        username: emailTrim,
+        email: emailTrim,
+        cpf: cpfLimpo,
+        nivelAcesso: "PRESTADOR",
+        statusUsuario: response?.data?.statusUsuario ?? "ATIVO",
+      };
+
+      await login(userData);
+
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      if (error.response?.status === 400) {
+        Alert.alert("Erro", "Dados inválidos.");
+      } else if (error.response?.status === 409) {
+        Alert.alert("Erro", "Email já está em uso.");
+      } else {
+        Alert.alert("Erro", "Erro ao finalizar cadastro.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const estados = [
@@ -227,7 +304,10 @@ export default function Cadastro() {
             <Input
               label="DDD*"
               value={telefoneDDD}
-              onChangeText={(text) => setTelefoneDDD(maskDDD(text))}
+              onChangeText={(text) => {
+                setTelefoneDDD(maskDDD(text));
+                setFieldErrors((prev) => ({ ...prev, telefoneDDD: "" }));
+              }}
               width="21%"
               keyboardType="numeric"
               error={fieldErrors.telefoneDDD}
@@ -235,7 +315,10 @@ export default function Cadastro() {
             <Input
               label="Telefone*"
               value={telefone}
-              onChangeText={(text) => setTelefone(maskPhone(text))}
+              onChangeText={(text) => {
+                setTelefone(maskPhone(text));
+                setFieldErrors((prev) => ({ ...prev, telefone: "" }));
+              }}
               width="75%"
               keyboardType="numeric"
               error={fieldErrors.telefone}
@@ -245,7 +328,10 @@ export default function Cadastro() {
           <Input
             label="CPF*"
             value={cpf}
-            onChangeText={(text) => setCpf(maskCPF(text))}
+            onChangeText={(text) => {
+              setCpf(maskCPF(text));
+              setFieldErrors((prev) => ({ ...prev, cpf: "" }));
+            }}
             keyboardType="numeric"
             error={fieldErrors.cpf}
           />
@@ -364,9 +450,67 @@ export default function Cadastro() {
             error={fieldErrors.estado}
           />
 
+          <View style={styles.checkboxes}>
+            <View>
+              <CheckboxInput
+                label={
+                  <Text style={{ color: "#000" }}>
+                    Li e aceito os Termos de Uso e a{" "}
+                    <Text
+                      style={{ color: "#007AFF", fontWeight: "500" }}
+                      onPress={() =>
+                        router.push("/(auth)/politica-privacidade")
+                      }
+                    >
+                      Política de Privacidade
+                    </Text>
+                  </Text>
+                }
+                value={acceptTerms1}
+                onChange={(value) => {
+                  setAcceptTerms1(value);
+                  setFieldErrors((prev) => ({ ...prev, terms1: "" }));
+                }}
+              />
+              {!!fieldErrors.terms1 && (
+                <Text style={styles.errorText}>{fieldErrors.terms1}</Text>
+              )}
+            </View>
+
+            <View>
+              <CheckboxInput
+                label={
+                  <Text style={{ color: "#000" }}>
+                    O{" "}
+                    <Text
+                      style={{
+                        color: "#F05221",
+                        fontStyle: "italic",
+                        fontWeight: "900",
+                      }}
+                    >
+                      DivulgAí
+                    </Text>{" "}
+                    nunca compartilhará seus dados com terceiros.
+                  </Text>
+                }
+                value={acceptTerms2}
+                onChange={(value) => {
+                  setAcceptTerms2(value);
+                  setFieldErrors((prev) => ({ ...prev, terms2: "" }));
+                }}
+              />
+              {!!fieldErrors.terms2 && (
+                <Text style={styles.errorText}>{fieldErrors.terms2}</Text>
+              )}
+            </View>
+          </View>
+
           <View style={styles.buttonarea}>
             <Button onPress={handleSubmit}>
-              <Text style={typography.buttonText}>Continuar</Text>
+              <Text style={typography.buttonText}>
+                {loading ? "Carregando..." : "Cadastrar"}
+              </Text>
             </Button>
           </View>
         </View>
@@ -402,12 +546,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  privacyLink: {
-    color: "#007AFF",
-    textDecorationLine: "underline",
-    marginTop: 8,
-    textAlign: "center",
-  },
 
   passwordRequirements: {
     width: "100%",
@@ -430,11 +568,18 @@ const styles = StyleSheet.create({
     color: "#C62828",
   },
 
+  checkboxes: {
+    marginTop: 15,
+    gap: 10,
+  },
+
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
+  },
+
   buttonarea: {
     marginTop: 20,
   },
 });
-
-//          <Pressable onPress={() => router.push("/(auth)/politica-privacidade")}>
-//            <Text style={styles.privacyLink}>Ler Política de Privacidade</Text>
-//          </Pressable>

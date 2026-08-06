@@ -1,8 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,10 +11,8 @@ import {
   View,
 } from "react-native";
 
-import React from "react";
 import { globalapi } from "../../assets/api/globalapi";
 import BottomNav from "../../assets/components/BottomNav";
-import { Button } from "../../assets/components/Button";
 import { DateInput } from "../../assets/components/DateInput";
 import { Header } from "../../assets/components/Header";
 import { Input } from "../../assets/components/Input";
@@ -22,8 +21,16 @@ import { typography } from "../../assets/globalstyles/fonts";
 import { useAuth } from "../../src/context/AuthContext";
 import { getPrestadorByUsuario } from "../../src/services/prestadorService";
 
+function showAlert(title: string, message: string) {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
+
 function onlyDigits(value: string) {
-  return value.replace(/\D/g, "");
+  return String(value || "").replace(/\D/g, "");
 }
 
 function maskCPF(value: string) {
@@ -70,36 +77,36 @@ function normalizeGender(value: any) {
 }
 
 async function upsertUsuario(userId: number, payload: Record<string, any>) {
-  const endpoints = [`usuario/${userId}`];
+  const formData = new FormData();
 
-  for (const endpoint of endpoints) {
-    try {
-      const response = await globalapi.put(endpoint, payload);
-      return response.data;
-    } catch (error: any) {
-      if (error?.response?.status !== 404) throw error;
-    }
+  if (Platform.OS === "web") {
+    const jsonBlob = new Blob([JSON.stringify(payload)], {
+      type: "application/json",
+    });
+    formData.append("usuario", jsonBlob);
+  } else {
+    formData.append("usuario", JSON.stringify(payload) as any);
   }
 
-  throw new Error("ENDPOINT_USUARIO_UPDATE_NOT_FOUND");
+  const response = await globalapi.put(`usuario/${userId}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return response.data;
 }
 
 async function upsertPrestador(
   prestadorId: number,
   payload: Record<string, any>,
 ) {
-  const endpoints = [`prestador/${prestadorId}`];
-
-  for (const endpoint of endpoints) {
-    try {
-      const response = await globalapi.put(endpoint, payload);
-      return response.data;
-    } catch (error: any) {
-      if (error?.response?.status !== 404) throw error;
-    }
-  }
-
-  throw new Error("ENDPOINT_PRESTADOR_UPDATE_NOT_FOUND");
+  const response = await globalapi.put(`prestador/${prestadorId}`, payload, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  return response.data;
 }
 
 export default function Personalinfo() {
@@ -116,6 +123,7 @@ export default function Personalinfo() {
   const [birthDate, setBirthDate] = useState<Date>(new Date(2000, 0, 1));
   const [estado, setEstado] = useState("");
 
+  const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [prestadorId, setPrestadorId] = useState<number | null>(null);
@@ -168,14 +176,21 @@ export default function Personalinfo() {
         ]);
 
         const usuario = usuarioRes.data || {};
-
         const telefoneBruto = onlyDigits(
           prestador?.telefone || usuario?.telefone || "",
         );
 
-        setNome(usuario?.nome || "");
-        setEmail(usuario?.email || "");
-        setCpf(maskCPF(prestador?.cpf || usuario?.cpf || ""));
+        const emailCarregado =
+          usuario?.email ||
+          usuario?.username ||
+          prestador?.email ||
+          user?.email ||
+          user?.username ||
+          "";
+
+        setNome(usuario?.nome || user?.nome || "");
+        setEmail(emailCarregado);
+        setCpf(maskCPF(prestador?.cpf || usuario?.cpf || user?.cpf || ""));
         setTelefoneDDD(telefoneBruto.slice(0, 2));
         setTelefone(maskPhone(telefoneBruto.slice(2)));
         setGender(normalizeGender(prestador?.genero || usuario?.genero));
@@ -185,7 +200,7 @@ export default function Personalinfo() {
         setEstado(prestador?.uf || usuario?.estado || "");
         setPrestadorId(prestador?.id || null);
       } catch (error: any) {
-        Alert.alert(
+        showAlert(
           "Erro",
           error?.response?.data?.message ||
             "Não foi possível carregar seus dados pessoais.",
@@ -196,34 +211,48 @@ export default function Personalinfo() {
     }
 
     loadData();
-  }, [user?.id]);
+  }, [user]);
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
+  };
 
   const handleSubmit = async () => {
+    if (loading) return;
+
     if (!user?.id) {
-      Alert.alert("Erro", "Usuário não identificado.");
+      showAlert("Erro", "Usuário não identificado.");
       return;
     }
 
     const errors: string[] = [];
-    const nomeTrim = nome.trim();
-    const emailTrim = email.trim().toLowerCase();
+    const nomeTrim = String(nome || "").trim();
+    const emailTrim = String(email || "")
+      .trim()
+      .toLowerCase();
     const cpfLimpo = onlyDigits(cpf);
     const dddLimpo = onlyDigits(telefoneDDD);
     const telefoneLimpo = onlyDigits(telefone);
     const telefoneCompleto = dddLimpo + telefoneLimpo;
 
-    if (!nomeTrim) errors.push("Nome é obrigatório");
-    if (!emailTrim || !emailTrim.includes("@")) errors.push("Email inválido");
-    if (cpfLimpo.length !== 11) errors.push("CPF inválido");
-    if (dddLimpo.length !== 2) errors.push("DDD inválido");
+    if (!nomeTrim) errors.push("Nome é obrigatório.");
+    if (!emailTrim || !emailTrim.includes("@")) errors.push("Email inválido.");
+    if (cpfLimpo.length !== 11)
+      errors.push("CPF inválido (deve conter 11 dígitos).");
+    if (dddLimpo.length !== 2)
+      errors.push("DDD inválido (deve conter 2 dígitos).");
     if (telefoneLimpo.length < 8 || telefoneLimpo.length > 9) {
-      errors.push("Telefone inválido");
+      errors.push("Telefone inválido (deve conter 8 ou 9 dígitos).");
     }
-    if (!gender) errors.push("Gênero é obrigatório");
-    if (!estado) errors.push("Estado é obrigatório");
+    if (!gender) errors.push("Gênero é obrigatório.");
+    if (!estado) errors.push("Estado é obrigatório.");
 
     if (errors.length > 0) {
-      Alert.alert("Validação", errors.join("\n"));
+      showAlert("Campos pendentes", errors.join("\n"));
       return;
     }
 
@@ -232,16 +261,22 @@ export default function Personalinfo() {
 
       const usuarioPayload: Record<string, any> = {
         nome: nomeTrim,
+        username: emailTrim,
         email: emailTrim,
       };
 
-      if (senha.trim().length >= 6) {
-        usuarioPayload.senha = senha.trim();
+      if (String(senha || "").trim().length >= 6) {
+        usuarioPayload.senha = String(senha).trim();
       }
 
       await upsertUsuario(Number(user.id), usuarioPayload);
 
       if (prestadorId) {
+        const parsedDate =
+          birthDate instanceof Date && !isNaN(birthDate.getTime())
+            ? birthDate
+            : new Date(2000, 0, 1);
+
         const prestadorPayload = {
           nome: nomeTrim,
           cpf: cpfLimpo,
@@ -252,19 +287,22 @@ export default function Personalinfo() {
               : gender === "f"
                 ? "Feminino"
                 : "Outro",
-          dataNascimento: birthDate.toISOString(),
+          dataNascimento: parsedDate.toISOString(),
           uf: estado,
         };
 
         await upsertPrestador(prestadorId, prestadorPayload);
       }
 
-      Alert.alert("Sucesso", "Informações pessoais atualizadas.");
-      router.push("/(telas)/workinfo");
+      showAlert("Sucesso", "Informações pessoais atualizadas com sucesso!");
+      setIsEditing(false);
     } catch (error: any) {
-      Alert.alert(
-        "Erro",
-        error?.response?.data?.message || "Não foi possível salvar os dados.",
+      console.error("Erro ao salvar perfil:", error);
+      showAlert(
+        "Erro ao salvar",
+        error?.response?.data?.message ||
+          error?.message ||
+          "Não foi possível salvar os dados.",
       );
     } finally {
       setLoading(false);
@@ -277,7 +315,7 @@ export default function Personalinfo() {
         <Text style={typography.title}>Informações pessoais</Text>
       </Header>
 
-      <Pressable style={styles.backButton} onPress={() => router.back()}>
+      <Pressable style={styles.backButton} onPress={handleBack}>
         <Ionicons name="arrow-back-outline" size={24} color="black" />
       </Pressable>
 
@@ -287,7 +325,12 @@ export default function Personalinfo() {
             <Text style={styles.loadingText}>Carregando dados...</Text>
           ) : (
             <>
-              <Input label="Nome*" value={nome} onChangeText={setNome} />
+              <Input
+                label="Nome*"
+                value={nome}
+                onChangeText={setNome}
+                editable={isEditing}
+              />
 
               <View style={styles.rowInputs}>
                 <Input
@@ -296,6 +339,7 @@ export default function Personalinfo() {
                   onChangeText={(text) => setTelefoneDDD(maskDDD(text))}
                   width="21%"
                   keyboardType="numeric"
+                  editable={isEditing}
                 />
                 <Input
                   label="Telefone*"
@@ -303,6 +347,7 @@ export default function Personalinfo() {
                   onChangeText={(text) => setTelefone(maskPhone(text))}
                   width="75%"
                   keyboardType="numeric"
+                  editable={isEditing}
                 />
               </View>
 
@@ -311,6 +356,7 @@ export default function Personalinfo() {
                 value={cpf}
                 onChangeText={(text) => setCpf(maskCPF(text))}
                 keyboardType="numeric"
+                editable={false}
               />
 
               <Input
@@ -318,14 +364,18 @@ export default function Personalinfo() {
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
+                editable={false}
               />
 
-              <Input
-                label="Nova senha (opcional)"
-                value={senha}
-                onChangeText={setSenha}
-                secureTextEntry
-              />
+              {isEditing && (
+                <Input
+                  label="Nova senha (opcional)"
+                  value={senha}
+                  onChangeText={setSenha}
+                  secureTextEntry
+                  editable={isEditing}
+                />
+              )}
 
               <View style={styles.rowInputs}>
                 <DateInput
@@ -333,6 +383,7 @@ export default function Personalinfo() {
                   value={birthDate}
                   onChange={setBirthDate}
                   width="48%"
+                  disabled={!isEditing}
                 />
 
                 <SelectInput
@@ -340,6 +391,7 @@ export default function Personalinfo() {
                   selectedValue={gender}
                   onValueChange={setGender}
                   width="48%"
+                  disabled={!isEditing}
                   options={[
                     { label: "Selecione...", value: "" },
                     { label: "Masculino", value: "m" },
@@ -354,14 +406,29 @@ export default function Personalinfo() {
                 selectedValue={estado}
                 onValueChange={setEstado}
                 options={estados}
+                disabled={!isEditing}
               />
 
               <View style={styles.buttonArea}>
-                <Button onPress={handleSubmit} disabled={loading}>
-                  <Text style={typography.buttonText}>
-                    {loading ? "Salvando..." : "Concluir"}
-                  </Text>
-                </Button>
+                {!isEditing ? (
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={() => setIsEditing(true)}
+                  >
+                    <Text style={styles.actionButtonText}>
+                      Editar informações
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    style={[styles.actionButton, loading && { opacity: 0.7 }]}
+                    onPress={handleSubmit}
+                  >
+                    <Text style={styles.actionButtonText}>
+                      {loading ? "Salvando..." : "Salvar alterações"}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             </>
           )}
@@ -404,6 +471,20 @@ const styles = StyleSheet.create({
   buttonArea: {
     marginTop: 20,
     marginBottom: 12,
+  },
+
+  actionButton: {
+    backgroundColor: "#F05221",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  actionButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 
   loadingText: {

@@ -46,7 +46,7 @@ export default function Landing() {
   const [analysisModalVisible, setAnalysisModalVisible] = useState(false);
   const [analysisModalShown, setAnalysisModalShown] = useState(false);
 
-    const hasCardData = !!(
+  const hasCardData = !!(
     prestador?.id ||
     servico?.id ||
     servico?.idServico ||
@@ -163,7 +163,10 @@ export default function Landing() {
       setFotoUsuario(normalizeImageUri(usuarioData?.foto));
 
       if (!prestadorData?.id) {
-        console.log("[HOME] Nenhum prestador encontrado para user.id =", user.id);
+        console.log(
+          "[HOME] Nenhum prestador encontrado para user.id =",
+          user.id,
+        );
         setServico(null);
         return;
       }
@@ -201,11 +204,17 @@ export default function Landing() {
           servicos[0]
         : null;
 
-      console.log("[HOME] servicoVisivel encontrado:", sanitizeDeep(servicoVisivel));
+      console.log(
+        "[HOME] servicoVisivel encontrado:",
+        sanitizeDeep(servicoVisivel),
+      );
 
       setServico(servicoVisivel || null);
     } catch (error: any) {
-      console.log("[HOME] Erro ao carregar card da home:", sanitizeError(error));
+      console.log(
+        "[HOME] Erro ao carregar card da home:",
+        sanitizeError(error),
+      );
 
       setPrestador(null);
       setServico(null);
@@ -341,8 +350,6 @@ export default function Landing() {
                 style={styles.serviceImage}
               />
 
-              
-
               <View style={styles.feedbackButtonsRow}>
                 <Pressable
                   style={styles.feedbackButton}
@@ -361,14 +368,15 @@ export default function Landing() {
                     Minhas ocorrências
                   </Text>
                 </Pressable>
-                
               </View>
               <View style={styles.cardFooter}>
                 <View style={styles.viewsRow}>
                   <Ionicons name="eye" size={30} color="#F05221" />
                   <Text style={styles.cardFooterText}>
                     Seu perfil foi visto por{" "}
-                    <Text style={styles.cardCounter}>{getServicoContador()}</Text>{" "}
+                    <Text style={styles.cardCounter}>
+                      {getServicoContador()}
+                    </Text>{" "}
                     pessoas
                   </Text>
                 </View>

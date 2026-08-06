@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -9,10 +9,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { normalizeContactLink } from "../../src/utils/contactLinks";
-import React from "react";
+
 import { buscarCep } from "../../assets/api/apiviacep";
-import { globalapi, sanitizeForLog } from "../../assets/api/globalapi";
+import { globalapi } from "../../assets/api/globalapi";
 import BottomNav from "../../assets/components/BottomNav";
 import { Button } from "../../assets/components/Button";
 import { Header } from "../../assets/components/Header";
@@ -28,6 +27,7 @@ import {
   normalizeImageUri,
   updateUsuarioFoto,
 } from "../../src/services/prestadorService";
+import { normalizeContactLink } from "../../src/utils/contactLinks";
 
 type ContatoItem = {
   id?: number;
@@ -111,7 +111,7 @@ export default function Workinfo() {
 
   const [prestadorId, setPrestadorId] = useState<number | null>(null);
   const [servicoId, setServicoId] = useState<number | null>(null);
- const [statusPrestador, setStatusPrestador] = useState("EM ANALISE");
+  const [statusPrestador, setStatusPrestador] = useState("EM_ANALISE");
 
   const genderOptions = useMemo(
     () => [
@@ -189,16 +189,20 @@ export default function Workinfo() {
 
   useEffect(() => {
     async function loadCategorias() {
-      const res = await globalapi.get("categoria");
+      try {
+        const res = await globalapi.get("categoria");
 
-      const lista = res.data
-        .filter((c: any) => c.statusCategoria)
-        .map((c: any) => ({
-          label: c.nome,
-          value: String(c.id),
-        }));
+        const lista = res.data
+          .filter((c: any) => c.statusCategoria)
+          .map((c: any) => ({
+            label: c.nome,
+            value: String(c.id),
+          }));
 
-      setCategoriasApi(lista);
+        setCategoriasApi(lista);
+      } catch (error) {
+        console.warn("Erro ao carregar categorias:", error);
+      }
     }
 
     loadCategorias();
@@ -212,6 +216,30 @@ export default function Workinfo() {
       }
 
       try {
+        // 1. CARREGAMENTO E FORMATAÇÃO DA FOTO DO USUÁRIO
+        let rawFoto = user?.foto || null;
+        try {
+          const usuarioRes = await globalapi.get(`usuario/${user.id}`);
+          if (usuarioRes?.data?.foto) {
+            rawFoto = usuarioRes.data.foto;
+          }
+        } catch (uErr) {
+          console.warn("Erro ao buscar usuário para foto:", uErr);
+        }
+
+        if (rawFoto) {
+          let uriFinal = rawFoto;
+          if (
+            !rawFoto.startsWith("http") &&
+            !rawFoto.startsWith("data:") &&
+            !rawFoto.startsWith("file:")
+          ) {
+            uriFinal = `data:image/jpeg;base64,${rawFoto}`;
+          }
+          setProfileImage({ uri: uriFinal, base64: rawFoto });
+        }
+
+        // 2. BUSCA O PRESTADOR
         const prestador = await getPrestadorByUsuario(user.id);
         if (!prestador?.id) {
           Alert.alert(
@@ -224,22 +252,37 @@ export default function Workinfo() {
 
         setPrestadorId(prestador.id);
         setStatusPrestador(
-          prestador?.statusPrestador ?? prestador?.status_prestador ?? "EM ANALISE",
+          prestador?.statusPrestador ??
+            prestador?.status_prestador ??
+            "EM_ANALISE",
         );
 
-        const [servicos, contatoRes] = await Promise.all([
-          getServicosByPrestador(prestador.id),
-          globalapi.get("contato"),
-        ]);
+        // 3. BUSCA SERVIÇOS (COM TRATAMENTO DEFENSIVO DE 404)
+        let servicos = [];
+        try {
+          servicos = await getServicosByPrestador(prestador.id);
+        } catch (servicoErr: any) {
+          if (servicoErr?.response?.status !== 404) {
+            console.warn("Erro ao buscar serviços:", servicoErr);
+          }
+        }
+
+        // 4. BUSCA CONTATOS
+        let contatosTodos = [];
+        try {
+          const contatoRes = await globalapi.get("contato");
+          contatosTodos = Array.isArray(contatoRes?.data)
+            ? contatoRes.data
+            : [];
+        } catch (contatoErr: any) {
+          console.warn("Erro ao buscar contatos:", contatoErr);
+        }
 
         const servicoAtivo =
           (Array.isArray(servicos) ? servicos : []).find(
             (item: any) => item?.statusServico === "ATIVO",
           ) || servicos?.[0];
 
-        const contatosTodos = Array.isArray(contatoRes?.data)
-          ? contatoRes.data
-          : [];
         const contatosFiltrados = contatosTodos
           .filter(
             (item: any) =>
@@ -275,9 +318,6 @@ export default function Workinfo() {
         if (servicoAtivo?.foto) {
           setEventImage({ uri: normalizeImageUri(servicoAtivo.foto) });
         }
-        if (user?.foto) {
-          setProfileImage({ uri: normalizeImageUri(user.foto) });
-        }
       } catch (error: any) {
         Alert.alert(
           "Erro",
@@ -290,7 +330,7 @@ export default function Workinfo() {
     }
 
     loadInfo();
-  }, [router, user?.foto, user?.id]);
+  }, [router, user?.id]);
 
   async function handleSubmit() {
     if (!prestadorId || !user?.id) {
@@ -316,12 +356,30 @@ export default function Workinfo() {
     try {
       setLoading(true);
 
+      // Tratamento para atualizar a foto do usuário (igual ao AccCreate.tsx)
       const profilePhotoBase64 = profileImage?.base64 || null;
-      if (profilePhotoBase64) {
-        await updateUsuarioFoto(Number(user.id), profilePhotoBase64);
+      const normalizedProfilePhotoBase64 =
+        typeof profilePhotoBase64 === "string" &&
+        profilePhotoBase64.startsWith("data:")
+          ? profilePhotoBase64.split(",")[1] || profilePhotoBase64
+          : profilePhotoBase64;
+
+      if (normalizedProfilePhotoBase64) {
+        try {
+          await updateUsuarioFoto(
+            Number(user.id),
+            normalizedProfilePhotoBase64,
+          );
+        } catch (photoError: any) {
+          console.warn(
+            "Erro ao atualizar foto do usuário:",
+            photoError?.message,
+          );
+        }
       }
 
       const prestadorPayload = {
+        usuario: { id: Number(user.id) },
         nome,
         cpf: String(cpf || "").replace(/\D/g, ""),
         dataNascimento: birthDate
@@ -339,6 +397,7 @@ export default function Workinfo() {
         cidade: municipio,
         uf: estado,
         statusPrestador,
+        status_prestador: statusPrestador,
       };
 
       await saveWithFallback({
@@ -384,26 +443,19 @@ export default function Workinfo() {
               statusContato: "ATIVO",
             };
 
-            console.log(
-              `[WORKINFO CONTATO ${index + 1}] payload:`,
-              sanitizeForLog(contatoPayload),
-            );
-
             if (contato.id) {
-              const response = await saveWithFallback({
+              return await saveWithFallback({
                 method: "put",
                 endpoints: [`contato/${contato.id}`],
                 payload: contatoPayload,
               });
-              return response;
             }
 
-            const response = await saveWithFallback({
+            return await saveWithFallback({
               method: "post",
               endpoints: ["contato"],
               payload: contatoPayload,
             });
-            return response;
           }),
         );
 
@@ -419,7 +471,10 @@ export default function Workinfo() {
         }
       }
 
-      Alert.alert("Sucesso", "Informações profissionais atualizadas.");
+      Alert.alert(
+        "Sucesso",
+        "Informações profissionais atualizadas com sucesso!",
+      );
       router.replace("/(tabs)/perfil");
     } catch (error: any) {
       Alert.alert(

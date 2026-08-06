@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { normalizeContactLink } from "../../src/utils/contactLinks";
-import React from "react";
 import { buscarCep } from "../../assets/api/apiviacep";
 import { globalapi, sanitizeForLog } from "../../assets/api/globalapi";
 import BottomNav from "../../assets/components/BottomNav";
@@ -29,7 +27,7 @@ import {
   clearPendingPrestadorProfile,
   getPendingPrestadorProfile,
 } from "../../src/storage/onboardingStorage";
-
+import { normalizeContactLink } from "../../src/utils/contactLinks";
 
 async function saveWithFallback(options: {
   method: "put" | "post";
@@ -140,8 +138,6 @@ export default function AccCreate() {
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-
-
   // =========================
   // CEP
   // =========================
@@ -180,14 +176,13 @@ export default function AccCreate() {
 
       setErroCep(errorMessage);
       console.error("[ViaCEP] Falha na consulta de CEP", {
-        cepDigitado:cepLimpo,
+        cepDigitado: cepLimpo,
         code: errorCode,
         message: errorMessage,
         status: error?.status || error?.response?.status,
         responseData: error?.response?.data,
         originalError: error?.originalError || error,
       });
-
     } finally {
       setLoadingCep(false);
     }
@@ -216,14 +211,15 @@ export default function AccCreate() {
   // VALIDACAO
   // =========================
   function validar() {
-     const errors: Record<string, string> = {};
+    const errors: Record<string, string> = {};
     const uid = Number(userId);
     if (!uid) return "User inválido";
-     if (!nome.trim()) {
+    if (!nome.trim()) {
       errors.nome = "O campo nome deve ser preenchido obrigatoriamente";
     }
     if (!descricao.trim()) {
-      errors.descricao = "O campo descrição deve ser preenchido obrigatoriamente";
+      errors.descricao =
+        "O campo descrição deve ser preenchido obrigatoriamente";
     }
     if (!cep || cep.length !== 8) {
       errors.cep = "O campo CEP deve ser preenchido obrigatoriamente";
@@ -247,7 +243,7 @@ export default function AccCreate() {
       errors.contato = "O campo contato deve ser preenchido obrigatoriamente";
     }
 
-     setFieldErrors(errors);
+    setFieldErrors(errors);
     return Object.keys(errors).length > 0
       ? "Preencha os campos obrigatórios."
       : null;
@@ -258,7 +254,7 @@ export default function AccCreate() {
   // =========================
   const handleSubmit = async () => {
     const erro = validar();
-if (erro) return;
+    if (erro) return;
 
     const cpfFinal = (cpf || cpfPersistido || "").replace(/\D/g, "");
     const contatosParaEnviar = [...contatos];
@@ -282,18 +278,18 @@ if (erro) return;
       if (normalizedProfilePhotoBase64) {
         try {
           await updateUsuarioFoto(Number(userId), normalizedProfilePhotoBase64);
-        }catch (photoError: any) {
-  console.log("WARN FOTO USUARIO:", photoError?.message || photoError);
+        } catch (photoError: any) {
+          console.log("WARN FOTO USUARIO:", photoError?.message || photoError);
 
-  console.error("[accCreate] Erro ao enviar foto do usuário", {
-    endpointTentado: "/usuario/{id}/foto",
-    userId: Number(userId),
-    status: photoError?.response?.status ?? "sem status",
-    url: photoError?.config?.url ?? "sem url",
-    message: photoError?.message ?? "sem mensagem",
-    responseData: photoError?.response?.data ?? "sem body",
-  });
-}
+          console.error("[accCreate] Erro ao enviar foto do usuário", {
+            endpointTentado: "/usuario/{id}/foto",
+            userId: Number(userId),
+            status: photoError?.response?.status ?? "sem status",
+            url: photoError?.config?.url ?? "sem url",
+            message: photoError?.message ?? "sem mensagem",
+            responseData: photoError?.response?.data ?? "sem body",
+          });
+        }
       }
 
       const prestadorPayload = {
@@ -338,7 +334,9 @@ if (erro) return;
       if (!prestadorId) throw new Error("Prestador não retornado");
 
       const statusSalvo = String(
-        prestadorSalvo?.statusPrestador ?? prestadorSalvo?.status_prestador ?? "",
+        prestadorSalvo?.statusPrestador ??
+          prestadorSalvo?.status_prestador ??
+          "",
       )
         .trim()
         .toUpperCase();
@@ -469,7 +467,7 @@ if (erro) return;
       console.log("=== ERROR ===");
       console.log(error?.response?.data || error.message);
 
-       console.error("[accCreate] DEBUG - Erro no cadastro de perfil", {
+      console.error("[accCreate] DEBUG - Erro no cadastro de perfil", {
         status: error?.response?.status ?? "sem status",
         url: error?.config?.url ?? "sem url",
         message: error?.message ?? "sem mensagem",
@@ -575,88 +573,87 @@ if (erro) return;
             />
           </View>
 
-<Input
-  label="Nome*"
-  value={nome}
-  onChangeText={(text) => {
-    setNome(text);
-    setFieldErrors((prev) => ({ ...prev, nome: "" }));
-  }}
-  error={fieldErrors.nome}
-/>
+          <Input
+            label="Nome*"
+            value={nome}
+            onChangeText={(text) => {
+              setNome(text);
+              setFieldErrors((prev) => ({ ...prev, nome: "" }));
+            }}
+            error={fieldErrors.nome}
+          />
 
-<Input
-  label="Descrição*"
-  multiline
-  value={descricao}
-  onChangeText={(text) => {
-    setDescricao(text);
-    setFieldErrors((prev) => ({ ...prev, descricao: "" }));
-  }}
-  error={fieldErrors.descricao}
-/>
+          <Input
+            label="Descrição*"
+            multiline
+            value={descricao}
+            onChangeText={(text) => {
+              setDescricao(text);
+              setFieldErrors((prev) => ({ ...prev, descricao: "" }));
+            }}
+            error={fieldErrors.descricao}
+          />
 
-
-<Input
-  label="CEP*"
-  value={formatCep(cep)}
-  onChangeText={(text) => {
-    handleCepChange(text);
-    setFieldErrors((prev) => ({ ...prev, cep: "" }));
-  }}
-  error={fieldErrors.cep}
-/>
+          <Input
+            label="CEP*"
+            value={formatCep(cep)}
+            onChangeText={(text) => {
+              handleCepChange(text);
+              setFieldErrors((prev) => ({ ...prev, cep: "" }));
+            }}
+            error={fieldErrors.cep}
+          />
 
           {loadingCep && <Text>Buscando CEP...</Text>}
           {erroCep && <Text style={{ color: "red" }}>{erroCep}</Text>}
 
           <View style={styles.rowInputs}>
-<SelectInput
-  label="Estado*"
-  selectedValue={estado}
-  onValueChange={() => {}}
-   options={[
-    { label: "Acre", value: "AC" },
-    { label: "Alagoas", value: "AL" },
-    { label: "Amapá", value: "AP" },
-    { label: "Amazonas", value: "AM" },
-    { label: "Bahia", value: "BA" },
-    { label: "Ceará", value: "CE" },
-    { label: "Distrito Federal", value: "DF" },
-    { label: "Espírito Santo", value: "ES" },
-    { label: "Goiás", value: "GO" },
-    { label: "Maranhão", value: "MA" },
-    { label: "Mato Grosso", value: "MT" },
-    { label: "Mato Grosso do Sul", value: "MS" },
-    { label: "Minas Gerais", value: "MG" },
-    { label: "Pará", value: "PA" },
-    { label: "Paraíba", value: "PB" },
-    { label: "Paraná", value: "PR" },
-    { label: "Pernambuco", value: "PE" },
-    { label: "Piauí", value: "PI" },
-    { label: "Rio de Janeiro", value: "RJ" },
-    { label: "Rio Grande do Norte", value: "RN" },
-    { label: "Rio Grande do Sul", value: "RS" },
-    { label: "Rondônia", value: "RO" },
-    { label: "Roraima", value: "RR" },
-    { label: "Santa Catarina", value: "SC" },
-    { label: "São Paulo", value: "SP" },
-    { label: "Sergipe", value: "SE" },
-    { label: "Tocantins", value: "TO" },
-  ]}
-  width={"31%"}
-  enabled={false}
-  error={fieldErrors.estado}
-/>
+            <SelectInput
+              label="Estado*"
+              selectedValue={estado}
+              onValueChange={() => {}}
+              options={[
+                { label: "Acre", value: "AC" },
+                { label: "Alagoas", value: "AL" },
+                { label: "Amapá", value: "AP" },
+                { label: "Amazonas", value: "AM" },
+                { label: "Bahia", value: "BA" },
+                { label: "Ceará", value: "CE" },
+                { label: "Distrito Federal", value: "DF" },
+                { label: "Espírito Santo", value: "ES" },
+                { label: "Goiás", value: "GO" },
+                { label: "Maranhão", value: "MA" },
+                { label: "Mato Grosso", value: "MT" },
+                { label: "Mato Grosso do Sul", value: "MS" },
+                { label: "Minas Gerais", value: "MG" },
+                { label: "Pará", value: "PA" },
+                { label: "Paraíba", value: "PB" },
+                { label: "Paraná", value: "PR" },
+                { label: "Pernambuco", value: "PE" },
+                { label: "Piauí", value: "PI" },
+                { label: "Rio de Janeiro", value: "RJ" },
+                { label: "Rio Grande do Norte", value: "RN" },
+                { label: "Rio Grande do Sul", value: "RS" },
+                { label: "Rondônia", value: "RO" },
+                { label: "Roraima", value: "RR" },
+                { label: "Santa Catarina", value: "SC" },
+                { label: "São Paulo", value: "SP" },
+                { label: "Sergipe", value: "SE" },
+                { label: "Tocantins", value: "TO" },
+              ]}
+              width={"31%"}
+              enabled={false}
+              error={fieldErrors.estado}
+            />
 
             <View style={styles.municipioContainer}>
-<Input
-  label="Município*"
-  value={municipio}
-  onChangeText={() => {}}
-  editable={false}
-  error={fieldErrors.municipio}
-/>
+              <Input
+                label="Município*"
+                value={municipio}
+                onChangeText={() => {}}
+                editable={false}
+                error={fieldErrors.municipio}
+              />
             </View>
           </View>
 
@@ -726,25 +723,23 @@ if (erro) return;
                 <TouchableOpacity onPress={() => removerContato(index)}>
                   <Text style={styles.remover}>Remover</Text>
                 </TouchableOpacity>
-                
               </View>
             ))}
-             {!!fieldErrors.contato && (
+            {!!fieldErrors.contato && (
               <Text style={styles.errorText}>{fieldErrors.contato}</Text>
             )}
           </View>
 
-<SelectInput
-  label="Categoria*"
-  selectedValue={categoria}
-  onValueChange={(value) => {
-    setCategoria(value);
-    setFieldErrors((prev) => ({ ...prev, categoria: "" }));
-  }}
-  options={categoriasApi}
-  error={fieldErrors.categoria}
-/>
-
+          <SelectInput
+            label="Categoria*"
+            selectedValue={categoria}
+            onValueChange={(value) => {
+              setCategoria(value);
+              setFieldErrors((prev) => ({ ...prev, categoria: "" }));
+            }}
+            options={categoriasApi}
+            error={fieldErrors.categoria}
+          />
 
           <ImageUpload
             label="Exemplo de serviço*"
@@ -800,7 +795,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-   errorText: {
+  errorText: {
     color: "red",
     fontSize: 12,
     marginTop: -2,

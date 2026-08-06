@@ -28,13 +28,14 @@ export const getPrestadorByUsuario = async (usuarioId) => {
       })
       .sort((a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0))[0];
 
-     if (prestadorMaisRecenteAtivo) return prestadorMaisRecenteAtivo;
+    if (prestadorMaisRecenteAtivo) return prestadorMaisRecenteAtivo;
 
     const prestadorMaisRecenteInativo = prestadoresDoUsuario.sort(
       (a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0),
     )[0];
 
-    if (prestadorMaisRecenteInativo) return prestadorMaisRecenteInativo;} catch (listError) {
+    if (prestadorMaisRecenteInativo) return prestadorMaisRecenteInativo;
+  } catch (listError) {
     console.log("WARN getPrestadorByUsuario list fallback:", listError);
   }
 
