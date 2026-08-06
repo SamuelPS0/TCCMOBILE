@@ -1,30 +1,34 @@
 import { globalapi } from "../../assets/api/globalapi";
 
-export const loginRequest = async (email, senha) => {
-  const response = await globalapi.get("/Usuario");
-
-  const usuarios = Array.isArray(response.data) ? response.data : [];
-
-  const usuarioEncontrado = usuarios.find(
-    (u) =>
-      u?.email?.toLowerCase()?.trim() === email.toLowerCase().trim() &&
-      u?.senha === senha,
-  );
-
-  if (!usuarioEncontrado) {
-    throw new Error("INVALID_CREDENTIALS");
-  }
-
-  if (!usuarioEncontrado.statusUsuario) {
-    throw new Error("USER_INACTIVE");
-  }
-
-  // Retorna só os dados necessários para sessão
+function normalizeUsuario(usuario) {
   return {
-    id: usuarioEncontrado.id,
-    nome: usuarioEncontrado.nome,
-    email: usuarioEncontrado.email,
-    nivelAcesso: usuarioEncontrado.nivelAcesso,
-    statusUsuario: usuarioEncontrado.statusUsuario,
+    id: usuario?.id,
+    nome: usuario?.nome,
+    username: usuario?.username,
+    email: usuario?.username,
+    nivelAcesso: usuario?.nivelAcesso,
+    statusUsuario: usuario?.statusUsuario,
   };
+}
+
+export const loginRequest = async (email, senha) => {
+  const params = new URLSearchParams();
+  params.append("username", String(email ?? "").trim().toLowerCase());
+  params.append("password", String(senha ?? ""));
+
+  try {
+    await globalapi.post("login", params, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      withCredentials: true,
+    });
+
+    const response = await globalapi.get("usuario/me", { withCredentials: true });
+    return normalizeUsuario(response.data);
+  } catch (error) {
+    if (error?.response?.status === 401 || error?.response?.status === 403) {
+      throw new Error("INVALID_CREDENTIALS");
+    }
+
+    throw error;
+  }
 };

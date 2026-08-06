@@ -72,7 +72,7 @@ async function inativarPrestadoresDuplicados(
       return;
     }
 
-    const response = await globalapi.get("Prestador");
+    const response = await globalapi.get("prestador");
     prestadores = Array.isArray(response.data) ? response.data : [];
   }
 
@@ -90,7 +90,7 @@ async function inativarPrestadoresDuplicados(
     duplicados.map((item) =>
       saveWithFallback({
         method: "put",
-        endpoints: [`prestador/${item.id}`, `Prestador/${item.id}`],
+        endpoints: [`prestador/${item.id}`],
         payload: {
           ...item,
           statusPrestador: "INATIVO",
@@ -286,7 +286,7 @@ if (erro) return;
   console.log("WARN FOTO USUARIO:", photoError?.message || photoError);
 
   console.error("[accCreate] Erro ao enviar foto do usuário", {
-    endpointTentado: "/Usuario/{id}/foto | /usuario/{id}/foto",
+    endpointTentado: "/usuario/{id}/foto",
     userId: Number(userId),
     status: photoError?.response?.status ?? "sem status",
     url: photoError?.config?.url ?? "sem url",
@@ -324,15 +324,12 @@ if (erro) return;
       const prestadorSalvo = prestadorExistente?.id
         ? await saveWithFallback({
             method: "put",
-            endpoints: [
-              `prestador/${prestadorExistente.id}`,
-              `Prestador/${prestadorExistente.id}`,
-            ],
+            endpoints: [`prestador/${prestadorExistente.id}`],
             payload: prestadorPayload,
           })
         : await saveWithFallback({
             method: "post",
-            endpoints: ["prestador", "Prestador"],
+            endpoints: ["prestador"],
             payload: prestadorPayload,
           });
 
@@ -349,7 +346,7 @@ if (erro) return;
       if (statusSalvo !== "EM_ANALISE") {
         await saveWithFallback({
           method: "put",
-          endpoints: [`prestador/${prestadorId}`, `Prestador/${prestadorId}`],
+          endpoints: [`prestador/${prestadorId}`],
           payload: {
             ...prestadorPayload,
             statusPrestador: "EM_ANALISE",
@@ -382,16 +379,13 @@ if (erro) return;
       if (servicoExistente?.id) {
         await saveWithFallback({
           method: "put",
-          endpoints: [
-            `servico/${servicoExistente.id}`,
-            `Servico/${servicoExistente.id}`,
-          ],
+          endpoints: [`servico/${servicoExistente.id}`],
           payload: servicoPayload,
         });
       } else {
         await saveWithFallback({
           method: "post",
-          endpoints: ["servico", "Servico"],
+          endpoints: ["servico"],
           payload: servicoPayload,
         });
       }
@@ -399,15 +393,14 @@ if (erro) return;
       if (contatosParaEnviar.length > 0) {
         const contatosComResultado = await Promise.allSettled(
           contatosParaEnviar.map(async (contato, index) => {
-       const contatoPayload = {
-  prestadorId,
-  tipoContato: contato.tipo,
-  link: normalizeContactLink(contato.tipo, contato.valor),
-  statusContato: "ATIVO",
-};
+            const contatoPayload = {
+              prestadorId,
+              tipoContato: contato.tipo,
+              link: normalizeContactLink(contato.tipo, contato.valor),
+              statusContato: "ATIVO",
+            };
 
             const endpointPrimario = "contato";
-            const endpointFallback = "Contato";
             let endpointFinal = endpointPrimario;
 
             console.log(
@@ -430,22 +423,6 @@ if (erro) return;
               );
               return { endpointFinal, response: response.data };
             } catch (errorContato: any) {
-              if (errorContato?.response?.status === 404) {
-                endpointFinal = endpointFallback;
-                console.log(
-                  `[CONTATO ${index + 1}] fallback endpoint:`,
-                  endpointFallback,
-                );
-                const fallbackResponse = await globalapi.post(
-                  endpointFallback,
-                  contatoPayload,
-                );
-                console.log(
-                  `[CONTATO ${index + 1}] resposta sucesso (${endpointFinal}):`,
-                  sanitizeForLog(fallbackResponse.data),
-                );
-                return { endpointFinal, response: fallbackResponse.data };
-              }
               console.log(`[CONTATO ${index + 1}] falha:`, {
                 endpointFinal,
                 status: errorContato?.response?.status ?? "sem status",
