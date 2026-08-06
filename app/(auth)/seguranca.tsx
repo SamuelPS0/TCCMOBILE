@@ -81,15 +81,18 @@ export default function Seguranca() {
 
       const payload = {
         nome,
-        email,
-        senha,
+        username: email.trim().toLowerCase(),
+        password: senha,
         nivelAcesso: "PRESTADOR",
-        statusUsuario: true,
-        ps_01: chave1Normalizada,
-        ps_02: chave2Normalizada,
       };
 
-      const response = await globalapi.post("Usuario", payload);
+      // As respostas de segurança continuam coletadas na UI, mas o contrato atual
+      // de /usuario/create não recebe ps_01/ps_02. Elas ficam disponíveis para
+      // uso futuro se o back-end passar a expor esse recurso.
+      void chave1Normalizada;
+      void chave2Normalizada;
+
+      const response = await globalapi.post("usuario/create", payload);
 
       const userId = response?.data?.id;
 
@@ -111,10 +114,11 @@ export default function Seguranca() {
       const userData = {
         id: userId,
         nome,
-        email,
+        username: email.trim().toLowerCase(),
+        email: email.trim().toLowerCase(),
         cpf,
         nivelAcesso: "PRESTADOR",
-        statusUsuario: true,
+        statusUsuario: response?.data?.statusUsuario ?? "ATIVO",
       };
 
       await login(userData);

@@ -1,7 +1,7 @@
 import { globalapi } from "../../assets/api/globalapi";
 
 export const getUsuarioById = async (userId) => {
-  const response = await globalapi.get(`Usuario/${userId}`);
+  const response = await globalapi.get(`usuario/${userId}`);
   return response.data;
 };
 
@@ -82,7 +82,7 @@ export const updateUsuarioFoto = async (userId, fotoBase64) => {
       : fotoBase64;
 
   const payload = { foto: fotoNormalizada };
-  const endpoints = [`Usuario/${userId}/foto`, `usuario/${userId}/foto`];
+  const endpoints = [`usuario/${userId}/foto`];
 
   for (const endpoint of endpoints) {
     try {

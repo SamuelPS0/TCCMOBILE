@@ -70,7 +70,7 @@ function normalizeGender(value: any) {
 }
 
 async function upsertUsuario(userId: number, payload: Record<string, any>) {
-  const endpoints = [`Usuario/${userId}`, `usuario/${userId}`];
+  const endpoints = [`usuario/${userId}`];
 
   for (const endpoint of endpoints) {
     try {
@@ -88,7 +88,7 @@ async function upsertPrestador(
   prestadorId: number,
   payload: Record<string, any>,
 ) {
-  const endpoints = [`prestador/${prestadorId}`, `Prestador/${prestadorId}`];
+  const endpoints = [`prestador/${prestadorId}`];
 
   for (const endpoint of endpoints) {
     try {
@@ -163,7 +163,7 @@ export default function Personalinfo() {
 
       try {
         const [usuarioRes, prestador] = await Promise.all([
-          globalapi.get(`Usuario/${user.id}`),
+          globalapi.get(`usuario/${user.id}`),
           getPrestadorByUsuario(user.id),
         ]);
 

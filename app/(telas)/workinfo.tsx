@@ -229,12 +229,7 @@ export default function Workinfo() {
 
         const [servicos, contatoRes] = await Promise.all([
           getServicosByPrestador(prestador.id),
-          globalapi.get("contato").catch(async (error: any) => {
-            if (error?.response?.status === 404) {
-              return globalapi.get("Contato");
-            }
-            throw error;
-          }),
+          globalapi.get("contato"),
         ]);
 
         const servicoAtivo =
@@ -348,7 +343,7 @@ export default function Workinfo() {
 
       await saveWithFallback({
         method: "put",
-        endpoints: [`prestador/${prestadorId}`, `Prestador/${prestadorId}`],
+        endpoints: [`prestador/${prestadorId}`],
         payload: prestadorPayload,
       });
 
@@ -364,13 +359,13 @@ export default function Workinfo() {
       if (servicoId) {
         await saveWithFallback({
           method: "put",
-          endpoints: [`servico/${servicoId}`, `Servico/${servicoId}`],
+          endpoints: [`servico/${servicoId}`],
           payload: servicoPayload,
         });
       } else {
         const novoServico = await saveWithFallback({
           method: "post",
-          endpoints: ["servico", "Servico"],
+          endpoints: ["servico"],
           payload: servicoPayload,
         });
 
@@ -382,12 +377,12 @@ export default function Workinfo() {
       if (contatosParaEnviar.length > 0) {
         const contatosComResultado = await Promise.allSettled(
           contatosParaEnviar.map(async (contato, index) => {
-       const contatoPayload = {
-  prestadorId,
-  tipoContato: contato.tipo,
-  link: normalizeContactLink(contato.tipo, contato.valor),
-  statusContato: "ATIVO",
-};
+            const contatoPayload = {
+              prestadorId,
+              tipoContato: contato.tipo,
+              link: normalizeContactLink(contato.tipo, contato.valor),
+              statusContato: "ATIVO",
+            };
 
             console.log(
               `[WORKINFO CONTATO ${index + 1}] payload:`,
@@ -397,7 +392,7 @@ export default function Workinfo() {
             if (contato.id) {
               const response = await saveWithFallback({
                 method: "put",
-                endpoints: [`contato/${contato.id}`, `Contato/${contato.id}`],
+                endpoints: [`contato/${contato.id}`],
                 payload: contatoPayload,
               });
               return response;
@@ -405,7 +400,7 @@ export default function Workinfo() {
 
             const response = await saveWithFallback({
               method: "post",
-              endpoints: ["contato", "Contato"],
+              endpoints: ["contato"],
               payload: contatoPayload,
             });
             return response;
