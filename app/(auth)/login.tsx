@@ -83,14 +83,25 @@ export default function Login() {
           autoCapitalize="none"
         />
 
-        <Input
-          label="Senha*"
-          placeholder="Digite sua senha"
-          width="90%"
-          value={senha}
-          onChangeText={setSenha}
-          secureTextEntry
-        />
+        <View style={{ width: "90%", alignSelf: "center" }}>
+          <Input
+            label="Senha*"
+            placeholder="Digite sua senha"
+            width="100%"
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry
+          />
+          <Pressable 
+            onPress={() => {
+              console.log("Clicou em esqueci a senha!");
+              router.push("/(auth)/VerificacaoEmail/esqsenha1");
+            }}
+            style={styles.forgotPasswordContainer}
+          >
+            <Text style={styles.forgotPasswordText}>Esqueceu sua senha?</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.buttonarea}>
@@ -112,28 +123,38 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   logoarea: {
-    flex: 1.7,
     justifyContent: "center",
-    paddingRight: 25,
     alignSelf: "center",
+    marginVertical: 20,
   },
   mainlogo: {
     width: 350,
     height: 200,
   },
   inputsarea: {
-    flex: 1,
     gap: 20,
+    width: "100%",
   },
   buttonarea: {
-    flex: 1,
     alignSelf: "center",
-    paddingTop: 55,
+    marginTop: 40, 
     width: "90%",
   },
   backButton: {
     position: "absolute",
     left: 25,
     top: 68,
+    zIndex: 10,
+  },
+  forgotPasswordContainer: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    zIndex: 20,
+  },
+  forgotPasswordText: {
+    color: "#F97316",
+    fontSize: 14,
+    fontWeight: "500",
+    textDecorationLine: "underline",
   },
 });

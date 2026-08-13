@@ -52,6 +52,7 @@ export default function Landing() {
     servico?.idServico ||
     servico?.id_servico
   );
+
   function getPrestadorStatusLabel() {
     const statusOriginal =
       prestador?.statusPrestador ?? prestador?.status_prestador ?? "EM ANALISE";
@@ -86,6 +87,7 @@ export default function Landing() {
   }
 
   function closeAnalysisModal() {
+    console.log("[DEBUG] Fechando modal de análise e redirecionando para as abas.");
     setAnalysisModalVisible(false);
     router.replace("/(tabs)");
   }
@@ -136,8 +138,10 @@ export default function Landing() {
   }
 
   const loadHomeCard = useCallback(async () => {
+    console.log("[DEBUG] [HOME] Executando loadHomeCard...");
+
     if (!user?.id) {
-      console.log("[HOME] user.id ausente");
+      console.log("[DEBUG] [HOME] user.id ausente ou nulo:", user);
       setPrestador(null);
       setServico(null);
       setFotoUsuario(null);
@@ -148,33 +152,40 @@ export default function Landing() {
     try {
       setLoadingCard(true);
 
-      console.log("[HOME] ===== INICIO loadHomeCard =====");
-      console.log("[HOME] user logado:", sanitizeDeep(user));
+      console.log("[DEBUG] [HOME] ===== INICIO loadHomeCard =====");
+      console.log("[DEBUG] [HOME] user logado completo:", sanitizeDeep(user));
+      console.log("[DEBUG] [HOME] ID do usuário autenticado:", user.id);
 
+      console.log("[DEBUG] [HOME] Buscando dados em paralelo: getPrestadorByUsuario e getUsuarioById...");
       const [prestadorData, usuarioData] = await Promise.all([
         getPrestadorByUsuario(user.id),
         getUsuarioById(user.id),
       ]);
 
-      console.log("[HOME] prestadorData:", sanitizeDeep(prestadorData));
-      console.log("[HOME] usuarioData:", sanitizeDeep(usuarioData));
+      console.log("[DEBUG] [HOME] prestadorData retornado:", sanitizeDeep(prestadorData));
+      console.log("[DEBUG] [HOME] usuarioData retornado:", sanitizeDeep(usuarioData));
 
       setPrestador(prestadorData || null);
       setFotoUsuario(normalizeImageUri(usuarioData?.foto));
 
       if (!prestadorData?.id) {
         console.log(
-          "[HOME] Nenhum prestador encontrado para user.id =",
+          "[DEBUG] [HOME] ATENÇÃO: Nenhum ID de prestador encontrado para user.id =",
           user.id,
         );
         setServico(null);
         return;
       }
 
+      console.log(
+        "[DEBUG] [HOME] Buscando serviços utilizando o ID correto do prestador:",
+        prestadorData.id,
+      );
+
       const servicos = await getServicosByPrestador(prestadorData.id);
 
       console.log(
-        "[HOME] servicos retornados:",
+        "[DEBUG] [HOME] servicos retornados da API:",
         Array.isArray(servicos)
           ? servicos.map((s: any) => sanitizeDeep(s))
           : sanitizeDeep(servicos),
@@ -205,14 +216,14 @@ export default function Landing() {
         : null;
 
       console.log(
-        "[HOME] servicoVisivel encontrado:",
+        "[DEBUG] [HOME] servicoVisivel selecionado:",
         sanitizeDeep(servicoVisivel),
       );
 
       setServico(servicoVisivel || null);
     } catch (error: any) {
       console.log(
-        "[HOME] Erro ao carregar card da home:",
+        "[DEBUG] [HOME] ERRO CRÍTICO ao carregar card da home:",
         sanitizeError(error),
       );
 
@@ -220,6 +231,7 @@ export default function Landing() {
       setServico(null);
       setFotoUsuario(null);
     } finally {
+      console.log("[DEBUG] [HOME] Finalizando carregamento. Desativando loadingCard em 1.5s.");
       setTimeout(() => {
         setLoadingCard(false);
       }, 1500);
@@ -228,29 +240,35 @@ export default function Landing() {
 
   useFocusEffect(
     useCallback(() => {
+      console.log("[DEBUG] [HOME] Tela recebeu foco (useFocusEffect disparado).");
       loadHomeCard();
     }, [loadHomeCard]),
   );
 
   useEffect(() => {
+    console.log("[DEBUG] [HOME] Verificando parâmetros de rota para modal de análise:", params);
     if (params.perfilEnviadoAnalise === "1" && !analysisModalShown) {
+      console.log("[DEBUG] [HOME] Exibindo modal de análise de perfil.");
       setAnalysisModalVisible(true);
       setAnalysisModalShown(true);
     }
   }, [analysisModalShown, params.perfilEnviadoAnalise]);
 
   async function handleCreateProfile() {
+    console.log("[DEBUG] [HOME] Botão 'Criar card' pressionado.");
     if (!user) {
-      console.log("Usuário não autenticado");
+      console.log("[DEBUG] [HOME] ERRO: Usuário não autenticado ao tentar criar perfil.");
       return;
     }
 
     const pendingProfile = await getPendingPrestadorProfile();
+    console.log("[DEBUG] [HOME] Pending profile recuperado do storage:", sanitizeDeep(pendingProfile));
 
     const cpf =
       user.cpf ||
       (pendingProfile?.userId === String(user.id) ? pendingProfile?.cpf : "");
 
+    console.log("[DEBUG] [HOME] Redirecionando para /(telas)/accCreate com userId:", user.id, "e cpf:", cpf);
     router.push({
       pathname: "/(telas)/accCreate",
       params: {
@@ -261,7 +279,11 @@ export default function Landing() {
   }
 
   async function openFeedbackModal(tipo: "FEEDBACK" | "DENUNCIA") {
-    if (!prestador?.id) return;
+    console.log("[DEBUG] [HOME] Abrindo modal de feedback/ocorrência. Tipo:", tipo);
+    if (!prestador?.id) {
+      console.log("[DEBUG] [HOME] Impossível abrir modal: prestador.id ausente.");
+      return;
+    }
 
     try {
       setFeedbackLoading(true);
@@ -270,10 +292,12 @@ export default function Landing() {
         tipo === "FEEDBACK" ? "Meus feedbacks" : "Minhas ocorrências",
       );
 
+      console.log("[DEBUG] [HOME] Buscando feedbacks filtrados para prestador ID:", prestador.id, "Tipo:", tipo);
       const lista = await getFeedbacksFiltrados(prestador.id, tipo);
+      console.log("[DEBUG] [HOME] Lista de feedbacks retornada:", sanitizeDeep(lista));
       setFeedbacks(lista);
     } catch (error: any) {
-      console.log("Erro ao carregar feedbacks:", sanitizeError(error));
+      console.log("[DEBUG] [HOME] Erro ao carregar feedbacks/ocorrências:", sanitizeError(error));
       setFeedbacks([]);
     } finally {
       setFeedbackLoading(false);
@@ -487,43 +511,35 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-
   scrollContent: {
     flexGrow: 1,
   },
-
   background: {
     width: "100%",
     height: "auto",
   },
-
   backgroundImage: {
     resizeMode: "cover",
   },
-
   mainArea: {
     flexGrow: 1,
     paddingBottom: 48,
   },
-
   loaderBox: {
     minHeight: 420,
     justifyContent: "center",
     alignItems: "center",
     gap: 25,
   },
-
   loaderIcon: {
     transform: [{ scale: 2 }],
   },
-
   loaderText: {
     color: "#FFFFFF",
     fontSize: 22,
     fontFamily: "Poppins_700Bold",
     textAlign: "center",
   },
-
   createCard: {
     width: 260,
     height: 130,
@@ -536,7 +552,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginTop: 120,
   },
-
   serviceCard: {
     width: "86%",
     alignSelf: "center",
@@ -552,21 +567,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-
   serviceTitle: {
     fontFamily: "Poppins_800ExtraBold",
     fontSize: 30,
     color: "#F05221",
     textAlign: "center",
   },
-
   divider: {
     marginTop: 8,
     width: "100%",
     borderBottomColor: "#c7c7c7",
     borderBottomWidth: 2,
   },
-
   avatar: {
     width: 140,
     height: 140,
@@ -574,7 +586,6 @@ const styles = StyleSheet.create({
     marginTop: 18,
     backgroundColor: "#ddd",
   },
-
   sectionTitle: {
     marginTop: 15,
     fontSize: 20,
@@ -582,7 +593,6 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_700Bold",
     color: "#111",
   },
-
   descriptionText: {
     width: "95%",
     textAlign: "justify",
@@ -591,7 +601,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minHeight: 60,
   },
-
   serviceImage: {
     width: "95%",
     height: 140,
@@ -599,7 +608,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: "#ddd",
   },
-
   cardFooter: {
     width: "100%",
     marginTop: 10,
@@ -610,7 +618,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
   },
-
   viewsRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -618,30 +625,24 @@ const styles = StyleSheet.create({
     gap: 12,
     flexWrap: "wrap",
   },
-
   cardFooterText: {
     color: "#111",
     fontFamily: "Poppins_700Bold",
     fontSize: 18,
     textAlign: "center",
   },
-
   cardCounter: {
     color: "#F05221",
   },
-
   cardStatusActive: {
     color: "#129A3A",
   },
-
   cardStatusAnalysis: {
     color: "#F05221",
   },
-
   cardStatusInactive: {
     color: "#e03535",
   },
-
   feedbackButtonsRow: {
     marginTop: 16,
     flexDirection: "row",
@@ -649,7 +650,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 10,
   },
-
   feedbackButton: {
     flex: 1,
     backgroundColor: "#f6f6f6",
@@ -664,19 +664,16 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-
   feedbackButtonTextFeedback: {
     color: "#2f9f4f",
     fontWeight: "600",
     fontSize: 13,
   },
-
   feedbackButtonTextDenuncia: {
     color: "#e03535",
     fontWeight: "600",
     fontSize: 13,
   },
-
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
@@ -684,7 +681,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 18,
   },
-
   modalContent: {
     width: "100%",
     maxHeight: "75%",
@@ -693,24 +689,20 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#111",
   },
-
   emptyFeedbackText: {
     color: "#666",
     textAlign: "center",
     marginVertical: 16,
   },
-
   feedbackListContent: {
     gap: 8,
     paddingBottom: 4,
   },
-
   feedbackItem: {
     borderWidth: 1,
     borderColor: "#eee",
@@ -718,18 +710,15 @@ const styles = StyleSheet.create({
     padding: 10,
     gap: 6,
   },
-
   feedbackItemTitle: {
     fontWeight: "700",
     color: "#222",
   },
-
   feedbackItemDesc: {
     color: "#555",
     lineHeight: 19,
     flexShrink: 1,
   },
-
   closeButton: {
     marginTop: 6,
     alignSelf: "flex-end",
@@ -738,12 +727,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
   },
-
   closeButtonText: {
     color: "#fff",
     fontWeight: "600",
   },
-
   analysisBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.25)",
@@ -751,7 +738,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 24,
   },
-
   analysisShadowCard: {
     position: "absolute",
     width: "78%",
@@ -765,7 +751,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-
   analysisModalCard: {
     width: "86%",
     maxWidth: 360,
@@ -778,7 +763,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 10,
   },
-
   analysisTopBlock: {
     height: 126,
     backgroundColor: "#FF3F1D",
@@ -787,7 +771,6 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 130,
     borderBottomRightRadius: 130,
   },
-
   analysisIconCircle: {
     width: 86,
     height: 86,
@@ -799,21 +782,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FFE1D8",
   },
-
   analysisBody: {
     paddingTop: 46,
     paddingHorizontal: 24,
     paddingBottom: 24,
     alignItems: "center",
   },
-
   analysisTitle: {
     color: "#F05221",
     fontFamily: "Poppins_800ExtraBold",
     fontSize: 24,
     textAlign: "center",
   },
-
   analysisDescription: {
     marginTop: 18,
     color: "#3F3F4F",
@@ -822,7 +802,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: "center",
   },
-
   analysisInfoBox: {
     width: "100%",
     marginTop: 22,
@@ -834,25 +813,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-
   analysisInfoTextWrapper: {
     flex: 1,
   },
-
   analysisInfoTitle: {
     color: "#F05221",
     fontFamily: "Poppins_700Bold",
     fontSize: 12,
     marginBottom: 4,
   },
-
   analysisInfoText: {
     color: "#3F3F4F",
     fontFamily: "Poppins_400Regular",
     fontSize: 10,
     lineHeight: 15,
   },
-
   analysisConfirmButton: {
     width: "100%",
     marginTop: 28,
@@ -861,7 +836,6 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     alignItems: "center",
   },
-
   analysisConfirmButtonText: {
     color: "#FFFFFF",
     fontFamily: "Poppins_700Bold",
