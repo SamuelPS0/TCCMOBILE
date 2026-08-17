@@ -1,8 +1,21 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
+
+import { Button } from "../../../assets/components/Button";
+import { Header } from "../../../assets/components/Header";
+import { typography } from "../../../assets/globalstyles/fonts";
 
 interface PasswordRule {
     label: string;
@@ -74,41 +87,177 @@ export default function NovaSenha() {
     };
 
     return (
-        <View>
-            <Text>Redefinição de senha</Text>
+        <View style={styles.container}>
+            <Header>
+                <Text style={typography.title}>Login</Text>
+            </Header>
 
-            <TextInput
-                secureTextEntry={!showPassword}
-                placeholder="Crie uma nova senha"
-                value={novaSenha}
-                onChangeText={setNovaSenha}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Text>{showPassword ? "Ocultar" : "Mostrar"}</Text>
-            </TouchableOpacity>
+            <Pressable style={styles.backButton} onPress={() => router.back()}>
+                <Ionicons name="arrow-back-outline" size={24} color="black" />
+            </Pressable>
 
-            {passwordRules.map((rule) => {
-                const valid = rule.test(novaSenha);
-                return (
-                    <Text key={rule.label} style={{ color: valid ? 'green' : 'red' }}>
-                        {valid ? "✓" : "✕"} {rule.label}
+            <View style={styles.contentArea}>
+                <View style={styles.textArea}>
+                    <Text style={styles.mainTitle}>
+                        REDEFINIÇÃO DE SENHA
                     </Text>
-                );
-            })}
+                </View>
 
-            <TextInput
-                secureTextEntry={!showConfirmPassword}
-                placeholder="Confirme sua nova senha"
-                value={confirmarSenha}
-                onChangeText={setConfirmarSenha}
-            />
-            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                <Text>{showConfirmPassword ? "Ocultar" : "Mostrar"}</Text>
-            </TouchableOpacity>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Digite a nova senha</Text>
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.input}
+                            secureTextEntry={!showPassword}
+                            placeholder="Insira sua senha aqui"
+                            placeholderTextColor="#A0A0A0"
+                            value={novaSenha}
+                            onChangeText={setNovaSenha}
+                        />
+                        <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                            <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#666" />
+                        </Pressable>
+                    </View>
+                </View>
 
-            <TouchableOpacity onPress={alterarSenha} disabled={loadingSenha}>
-                <Text>{loadingSenha ? "ALTERANDO..." : "SALVAR SENHA"}</Text>
-            </TouchableOpacity>
+                <View style={styles.rulesGrid}>
+                    {passwordRules.map((rule) => {
+                        const valid = rule.test(novaSenha);
+                        return (
+                            <View 
+                                key={rule.label} 
+                                style={[
+                                    styles.ruleBadge, 
+                                    { backgroundColor: valid ? '#e8f5e9' : '#fbe9e7' }
+                                ]}
+                            >
+                                <Ionicons 
+                                    name={valid ? "checkmark-circle" : "close-circle"} 
+                                    size={16} 
+                                    color={valid ? "#2e7d32" : "#d32f2f"} 
+                                />
+                                <Text 
+                                    style={[
+                                        styles.ruleText, 
+                                        { color: valid ? '#2e7d32' : '#d32f2f' }
+                                    ]}
+                                >
+                                    {rule.label}
+                                </Text>
+                            </View>
+                        );
+                    })}
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Confirme a nova senha</Text>
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.input}
+                            secureTextEntry={!showConfirmPassword}
+                            placeholder="Insira sua senha aqui"
+                            placeholderTextColor="#A0A0A0"
+                            value={confirmarSenha}
+                            onChangeText={setConfirmarSenha}
+                        />
+                        <Pressable onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                            <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#666" />
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
+
+            <View style={styles.buttonarea}>
+                <Button onPress={alterarSenha} width="90%" disabled={loadingSenha}>
+                    {loadingSenha ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={typography.buttonText}>SALVAR SENHA</Text>
+                    )}
+                </Button>
+            </View>
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: "#fff",
+        justifyContent: "space-between",
+        paddingBottom: 30,
+    },
+    backButton: {
+        position: "absolute",
+        left: 25,
+        top: 68,
+        zIndex: 10,
+    },
+    contentArea: {
+        width: "100%",
+        paddingHorizontal: 24,
+        marginTop: 20,
+    },
+    textArea: {
+        marginBottom: 20,
+    },
+    mainTitle: {
+        fontSize: 26,
+        fontWeight: "bold",
+        color: "#000",
+        lineHeight: 34,
+    },
+    inputGroup: {
+        marginBottom: 16,
+    },
+    label: {
+        fontSize: 14,
+        color: "#333",
+        marginBottom: 8,
+        fontWeight: "500",
+    },
+    inputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        borderWidth: 1.5,
+        borderColor: "#ccc",
+        borderRadius: 10,
+        backgroundColor: "#fff",
+        paddingHorizontal: 12,
+    },
+    input: {
+        flex: 1,
+        height: 52,
+        fontSize: 16,
+        color: "#000",
+        padding: 0,
+        includeFontPadding: false,
+    },
+    eyeIcon: {
+        padding: 8,
+    },
+    rulesGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+        marginBottom: 16,
+        gap: 8,
+    },
+    ruleBadge: {
+        width: "48%",
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        gap: 6,
+    },
+    ruleText: {
+        fontSize: 12,
+        fontWeight: "600",
+    },
+    buttonarea: {
+        width: "100%",
+        alignItems: "center",
+    },
+});

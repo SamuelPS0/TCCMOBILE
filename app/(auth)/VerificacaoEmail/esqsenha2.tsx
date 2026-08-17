@@ -1,8 +1,23 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, NativeSyntheticEvent, Text, TextInput, TextInputKeyPressEventData, TouchableOpacity, View } from "react-native";
+import {
+    ActivityIndicator,
+    Alert,
+    NativeSyntheticEvent,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TextInputKeyPressEventData,
+    View,
+} from "react-native";
+
+import { Button } from "../../../assets/components/Button";
+import { Header } from "../../../assets/components/Header";
+import { typography } from "../../../assets/globalstyles/fonts";
 
 export default function EsqSenha2() {
     const router = useRouter();
@@ -47,12 +62,25 @@ export default function EsqSenha2() {
     };
 
     const handleInputChange = (value: string, index: number): void => {
-        if (/^[0-9]?$/.test(value)) {
+        const cleanedValue = value.replace(/[^0-9]/g, "");
+
+        if (cleanedValue.length > 1) {
             const newCode = [...code];
-            newCode[index] = value;
+            for (let i = 0; i < 6; i++) {
+                newCode[i] = cleanedValue[i] || "";
+            }
+            setCode(newCode);
+            const nextIndex = Math.min(cleanedValue.length, 5);
+            inputRefs.current[nextIndex]?.focus();
+            return;
+        }
+
+        if (/^[0-9]?$/.test(cleanedValue)) {
+            const newCode = [...code];
+            newCode[index] = cleanedValue;
             setCode(newCode);
 
-            if (value && index < 5) {
+            if (cleanedValue && index < 5) {
                 inputRefs.current[index + 1]?.focus();
             }
         }
@@ -127,37 +155,143 @@ export default function EsqSenha2() {
     };
 
     return (
-        <View>
-            <Text>DIGITE O CÓDIGO DE VERIFICAÇÃO</Text>
+        <View style={styles.container}>
+            <Header>
+                <Text style={typography.title}>Login</Text>
+            </Header>
 
-            <View style={{ flexDirection: 'row' }}>
-                {code.map((digit, index) => (
-                    <TextInput
-                        key={index}
-                        ref={(el) => {
-                            inputRefs.current[index] = el;
-                        }}
-                        keyboardType="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChangeText={(value) => handleInputChange(value, index)}
-                        onKeyPress={(e) => handleKeyPress(e, index)}
-                    />
-                ))}
+            <Pressable style={styles.backButton} onPress={() => router.back()}>
+                <Ionicons name="arrow-back-outline" size={24} color="black" />
+            </Pressable>
+
+            <View style={styles.contentArea}>
+                <View style={styles.textArea}>
+                    <Text style={styles.mainTitle}>
+                        DIGITE O CÓDIGO{"\n"}DE VERIFICAÇÃO
+                    </Text>
+                </View>
+
+                <View style={styles.otpContainer}>
+                    {code.map((digit, index) => (
+                        <TextInput
+                            key={index}
+                            ref={(el) => {
+                                inputRefs.current[index] = el;
+                            }}
+                            style={styles.otpInput}
+                            keyboardType="numeric"
+                            maxLength={6}
+                            value={digit}
+                            onChangeText={(value) => handleInputChange(value, index)}
+                            onKeyPress={(e) => handleKeyPress(e, index)}
+                            textAlign="center"
+                        />
+                    ))}
+                </View>
+
+                <View style={styles.infoArea}>
+                    <Text style={styles.subtitle}>
+                        ENVIAMOS O CÓDIGO DE 6 DÍGITOS PARA{"\n"}
+                        O E-MAIL CADASTRADO. VERIFIQUE SUA{"\n"}
+                        CAIXA DE ENTRADA OU SPAM.
+                    </Text>
+                    <Text style={styles.timerText}>
+                        {timeLeft > 0 ? `O CÓDIGO EXPIRA EM ${formatTime(timeLeft)}.` : "O CÓDIGO EXPIROU."}
+                    </Text>
+                </View>
             </View>
 
-            <Text>ENVIAMOS O CÓDIGO DE 6 DÍGITOS PARA O E-MAIL CADASTRADO.</Text>
-            <Text>{timeLeft > 0 ? `O CÓDIGO EXPIRA EM ${formatTime(timeLeft)}.` : "O CÓDIGO EXPIROU."}</Text>
+            <View style={styles.buttonarea}>
+                <Button onPress={validarCodigo} width="90%" disabled={loadingCodigo || timeLeft === 0}>
+                    {loadingCodigo ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={typography.buttonText}>VERIFICAR CÓDIGO</Text>
+                    )}
+                </Button>
 
-            <TouchableOpacity onPress={validarCodigo} disabled={loadingCodigo || timeLeft === 0}>
-                <Text>{loadingCodigo ? "VALIDANDO..." : "VERIFICAR CÓDIGO"}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={reenviarCodigo} disabled={!canResend || loadingResend}>
-                <Text>
-                    {loadingResend ? "ENVIANDO..." : canResend ? "REENVIAR CÓDIGO" : `REENVIAR (${formatTime(resendTimer)})`}
-                </Text>
-            </TouchableOpacity>
+                <Button 
+                    onPress={reenviarCodigo} 
+                    width="90%" 
+                    variant="secondary"
+                    disabled={!canResend || loadingResend}
+                >
+                    {loadingResend ? (
+                        <ActivityIndicator color="#F05221" />
+                    ) : (
+                        <Text style={[typography.buttonText, { color: "#F05221" }]}>
+                            {canResend ? "REENVIAR CÓDIGO" : `REENVIAR (${formatTime(resendTimer)})`}
+                        </Text>
+                    )}
+                </Button>
+            </View>
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: "#fff",
+        justifyContent: "space-between",
+        paddingBottom: 30,
+    },
+    backButton: {
+        position: "absolute",
+        left: 25,
+        top: 68,
+        zIndex: 10,
+    },
+    contentArea: {
+        width: "100%",
+        paddingHorizontal: 24,
+        marginTop: 20,
+    },
+    textArea: {
+        marginBottom: 24,
+    },
+    mainTitle: {
+        fontSize: 26,
+        fontWeight: "bold",
+        color: "#000",
+        lineHeight: 34,
+    },
+    otpContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 30,
+    },
+    otpInput: {
+        width: 50,
+        height: 64,
+        borderWidth: 1.5,
+        borderColor: "#ccc",
+        borderRadius: 10,
+        fontSize: 26,
+        fontWeight: "bold",
+        backgroundColor: "#fff",
+        color: "#000",
+        textAlign: "center",
+        padding: 0,
+        includeFontPadding: false,
+        textAlignVertical: "center",
+    },
+    infoArea: {
+        gap: 16,
+    },
+    subtitle: {
+        fontSize: 14,
+        color: "#333",
+        lineHeight: 22,
+    },
+    timerText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: "#000",
+    },
+    buttonarea: {
+        width: "100%",
+        alignItems: "center",
+        gap: 16,
+    },
+});
