@@ -28,7 +28,7 @@ export default function EsqSenha1() {
 
             await AsyncStorage.setItem("emailRecuperacao", emailTrimmed);
             Alert.alert("Sucesso", "Código enviado para seu e-mail.");
-           router.push("/VerificacaoEmail/esqsenha2");
+            router.push("/(auth)/VerificacaoEmail/esqsenha2");
         } catch (error: any) {
             console.error(error);
             Alert.alert("Erro", error.response?.data || "Erro ao enviar o código.");
