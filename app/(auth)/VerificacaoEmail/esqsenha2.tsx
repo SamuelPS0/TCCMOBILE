@@ -79,10 +79,10 @@ export default function EsqSenha2() {
                 { params: { email, codigo: codigoCompleto } }
             );
             Alert.alert("Sucesso", "Código validado com sucesso.");
-           router.push({
-    pathname: "/VerificacaoEmail/novaSenha",
-    params: { codigo: codigoCompleto }
-});
+            router.push({
+                pathname: "/(auth)/VerificacaoEmail/novaSenha",
+                params: { codigo: codigoCompleto }
+            });
         } catch (error: any) {
             console.error(error);
             Alert.alert("Erro", error.response?.data || "Código inválido.");
@@ -134,7 +134,9 @@ export default function EsqSenha2() {
                 {code.map((digit, index) => (
                     <TextInput
                         key={index}
-                        ref={(el) => (inputRefs.current[index] = el)}
+                        ref={(el) => {
+                            inputRefs.current[index] = el;
+                        }}
                         keyboardType="numeric"
                         maxLength={1}
                         value={digit}
