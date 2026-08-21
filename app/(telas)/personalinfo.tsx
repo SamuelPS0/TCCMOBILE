@@ -76,6 +76,20 @@ function normalizeGender(value: any) {
   return "";
 }
 
+function getPasswordRequirements(value: string) {
+  return [
+    { label: "Mínimo de 6 caracteres", isValid: value.length >= 6 },
+    { label: "Uma letra maiúscula", isValid: /[A-Z]/.test(value) },
+    { label: "Uma letra minúscula", isValid: /[a-z]/.test(value) },
+    { label: "Um número", isValid: /\d/.test(value) },
+    { label: "Uma pontuação/especial", isValid: /[!@#$%^&*(),.?":{}|<>\-_=+\\[\]/\\;']/.test(value) },
+  ];
+}
+
+function isStrongPassword(value: string) {
+  return getPasswordRequirements(value).every((req) => req.isValid);
+}
+
 async function upsertUsuario(userId: number, payload: Record<string, any>) {
   const formData = new FormData();
 
@@ -119,6 +133,7 @@ export default function Personalinfo() {
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [gender, setGender] = useState("");
   const [birthDate, setBirthDate] = useState<Date>(new Date(2000, 0, 1));
   const [estado, setEstado] = useState("");
@@ -127,6 +142,8 @@ export default function Personalinfo() {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [prestadorId, setPrestadorId] = useState<number | null>(null);
+
+  const passwordRequirements = useMemo(() => getPasswordRequirements(senha), [senha]);
 
   const estados = useMemo(
     () => [
@@ -251,6 +268,11 @@ export default function Personalinfo() {
     if (!gender) errors.push("Gênero é obrigatório.");
     if (!estado) errors.push("Estado é obrigatório.");
 
+    // Validação de Obrigatoriedade da Nova Senha (se preenchida)
+    if (senha.trim().length > 0 && !isStrongPassword(senha)) {
+      errors.push("A nova senha precisa cumprir todos os requisitos de segurança.");
+    }
+
     if (errors.length > 0) {
       showAlert("Campos pendentes", errors.join("\n"));
       return;
@@ -265,8 +287,8 @@ export default function Personalinfo() {
         email: emailTrim,
       };
 
-      if (String(senha || "").trim().length >= 6) {
-        usuarioPayload.senha = String(senha).trim();
+      if (senha.trim().length > 0) {
+        usuarioPayload.senha = senha.trim();
       }
 
       await upsertUsuario(Number(user.id), usuarioPayload);
@@ -295,6 +317,7 @@ export default function Personalinfo() {
       }
 
       showAlert("Sucesso", "Informações pessoais atualizadas com sucesso!");
+      setSenha("");
       setIsEditing(false);
     } catch (error: any) {
       console.error("Erro ao salvar perfil:", error);
@@ -368,13 +391,48 @@ export default function Personalinfo() {
               />
 
               {isEditing && (
-                <Input
-                  label="Nova senha (opcional)"
-                  value={senha}
-                  onChangeText={setSenha}
-                  secureTextEntry
-                  editable={isEditing}
-                />
+                <View>
+                  <Input
+                    label="Nova senha (opcional)"
+                    value={senha}
+                    onChangeText={setSenha}
+                    secureTextEntry={!showPassword}
+                    rightIcon={showPassword ? "eye-off-outline" : "eye-outline"}
+                    onPressRightIcon={() => setShowPassword((prev) => !prev)}
+                    editable={isEditing}
+                  />
+
+                  {senha.length > 0 && (
+                    <View style={styles.rulesGrid}>
+                      {passwordRequirements.map((requirement) => {
+                        const valid = requirement.isValid;
+                        return (
+                          <View
+                            key={requirement.label}
+                            style={[
+                              styles.ruleBadge,
+                              { backgroundColor: valid ? "#e8f5e9" : "#fbe9e7" },
+                            ]}
+                          >
+                            <Ionicons
+                              name={valid ? "checkmark-circle" : "close-circle"}
+                              size={16}
+                              color={valid ? "#2e7d32" : "#d32f2f"}
+                            />
+                            <Text
+                              style={[
+                                styles.ruleText,
+                                { color: valid ? "#2e7d32" : "#d32f2f" },
+                              ]}
+                            >
+                              {requirement.label}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
               )}
 
               <View style={styles.rowInputs}>
@@ -466,6 +524,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+
+  rulesGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 8,
+    marginBottom: 4,
+    gap: 8,
+  },
+
+  ruleBadge: {
+    width: "48%",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    gap: 6,
+  },
+
+  ruleText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
 
   buttonArea: {

@@ -28,7 +28,40 @@ import {
   updateUsuarioFoto,
 } from "../../src/services/prestadorService";
 import { normalizeContactLink } from "../../src/utils/contactLinks";
-import { getPickedImageDebugInfo } from "../../src/utils/imagePickerAsset";
+
+// ================== MÁSCARAS & FORMATADORES ==================
+function onlyDigits(value: string) {
+  return (value || "").replace(/\D/g, "");
+}
+
+function maskCPF(value: string) {
+  const digits = onlyDigits(value).slice(0, 11);
+  return digits
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1-$2");
+}
+
+function maskDDD(value: string) {
+  return onlyDigits(value).slice(0, 2);
+}
+
+function maskPhone(value: string) {
+  const digits = onlyDigits(value).slice(0, 9);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 8) {
+    return digits.replace(/(\d{4})(\d+)/, "$1-$2");
+  }
+  return digits.replace(/(\d{5})(\d+)/, "$1-$2");
+}
+
+function normalizeSocialHandle(value: string) {
+  if (!value) return "";
+  let clean = value.trim();
+  clean = clean.replace(/^(https?:\/\/)?(www\.)?[^\/]+\//, "");
+  clean = clean.replace(/\/$/, "").replace(/^@+/, "");
+  return clean;
+}
 
 type ContatoItem = {
   id?: number;
@@ -38,7 +71,6 @@ type ContatoItem = {
 
 function parseTipoContato(value: any) {
   const clean = String(value || "").toLowerCase();
-
   if (clean.includes("insta")) return "Instagram";
   if (clean.includes("face")) return "Facebook";
   if (
@@ -48,7 +80,6 @@ function parseTipoContato(value: any) {
   ) {
     return "Whatsapp";
   }
-
   return value || "Whatsapp";
 }
 
@@ -65,7 +96,6 @@ async function saveWithFallback(options: {
         const response = await globalapi.put(endpoint, payload);
         return response.data;
       }
-
       const response = await globalapi.post(endpoint, payload);
       return response.data;
     } catch (error: any) {
@@ -85,6 +115,8 @@ export default function Workinfo() {
   const [cpf, setCpf] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("");
+
+  const [telefoneDDD, setTelefoneDDD] = useState("");
   const [telefoneUsuario, setTelefoneUsuario] = useState("");
 
   const [estado, setEstado] = useState("");
@@ -125,12 +157,12 @@ export default function Workinfo() {
   );
 
   const formatCep = useCallback((value: string) => {
-    const cleaned = value.replace(/\D/g, "");
+    const cleaned = onlyDigits(value);
     return cleaned.replace(/^(\d{5})(\d)/, "$1-$2");
   }, []);
 
   const handleCepChange = useCallback(async (text: string) => {
-    const cepLimpo = text.replace(/\D/g, "");
+    const cepLimpo = onlyDigits(text);
     setCep(cepLimpo);
 
     if (cepLimpo.length !== 8) return;
@@ -150,33 +182,32 @@ export default function Workinfo() {
       setLogradouro(data.logradouro || "");
       setBairro(data.bairro || "");
     } catch (error: any) {
-      const cepError = error?.message || "CEP_REDE_FALHOU";
-
-      if (cepError === "CEP_NAO_ENCONTRADO") {
-        setErroCep("CEP não encontrado");
-      } else if (cepError === "CEP_TIMEOUT") {
-        setErroCep("Tempo esgotado ao consultar CEP");
-      } else if (cepError.startsWith("CEP_HTTP_")) {
-        setErroCep(
-          `Falha no serviço de CEP (${cepError.replace("CEP_HTTP_", "HTTP ")})`,
-        );
-      } else {
-        setErroCep("Erro ao buscar CEP");
-      }
+      setErroCep("Erro ao buscar CEP");
     } finally {
       setLoadingCep(false);
     }
   }, []);
 
+  function handleBlurContato() {
+    if (tipoSelecionado !== "Whatsapp") {
+      setValorContato(normalizeSocialHandle(valorContato));
+    }
+  }
+
   function adicionarContato() {
     if (!tipoSelecionado || !valorContato) return;
     if (contatos.length >= 5) return;
+
+    const valorTratado =
+      tipoSelecionado === "Whatsapp"
+        ? maskPhone(valorContato)
+        : normalizeSocialHandle(valorContato);
 
     setContatos((prev) => [
       ...prev,
       {
         tipo: tipoSelecionado,
-        valor: valorContato,
+        valor: valorTratado,
       },
     ]);
 
@@ -192,7 +223,6 @@ export default function Workinfo() {
     async function loadCategorias() {
       try {
         const res = await globalapi.get("categoria");
-
         const lista = res.data
           .filter((c: any) => c.statusCategoria)
           .map((c: any) => ({
@@ -289,15 +319,23 @@ export default function Workinfo() {
           .map((item: any) => ({
             id: item.id,
             tipo: parseTipoContato(item?.tipoContato),
-            valor: item?.link || "",
+            valor: normalizeSocialHandle(item?.link || ""),
           }));
 
         setNome(servicoAtivo?.nome || prestador?.nome || "");
         setDescricao(servicoAtivo?.descricao || "");
-        setCpf(prestador?.cpf || "");
+        setCpf(maskCPF(prestador?.cpf || ""));
         setBirthDate(prestador?.dataNascimento || "");
         setGender(prestador?.genero || "");
-        setTelefoneUsuario(prestador?.telefone || "");
+
+        const telDigitos = onlyDigits(prestador?.telefone || "");
+        if (telDigitos.length >= 10) {
+          setTelefoneDDD(telDigitos.slice(0, 2));
+          setTelefoneUsuario(maskPhone(telDigitos.slice(2)));
+        } else {
+          setTelefoneUsuario(maskPhone(telDigitos));
+        }
+
         setEstado(prestador?.uf || "");
         setMunicipio(prestador?.cidade || "");
         setCategoria(
@@ -347,16 +385,16 @@ export default function Workinfo() {
 
     const contatosParaEnviar = [...contatos];
     if (tipoSelecionado && valorContato) {
-      contatosParaEnviar.push({ tipo: tipoSelecionado, valor: valorContato });
+      const valorFinal =
+        tipoSelecionado === "Whatsapp"
+          ? valorContato
+          : normalizeSocialHandle(valorContato);
+
+      contatosParaEnviar.push({ tipo: tipoSelecionado, valor: valorFinal });
     }
 
     try {
       setLoading(true);
-
-      console.log(
-        "[workinfo] Foto de perfil selecionada:",
-        getPickedImageDebugInfo(profileImage),
-      );
 
       const profilePhotoBase64 = profileImage?.base64 || null;
       const normalizedProfilePhotoBase64 =
@@ -366,39 +404,30 @@ export default function Workinfo() {
           : profilePhotoBase64;
 
       if (normalizedProfilePhotoBase64) {
-        try {
-          await updateUsuarioFoto(
-            Number(user.id),
-            normalizedProfilePhotoBase64,
-          );
-        } catch (photoError: any) {
-          console.warn(
-            "Erro ao atualizar foto do usuário:",
-            photoError?.message,
-          );
-          throw photoError;
-        }
-      } else if (profileImage?.uri && !profileImage?.uri.startsWith("http")) {
-        throw new Error(
-          "Foto de perfil selecionada sem dados Base64 para envio",
+        await updateUsuarioFoto(
+          Number(user.id),
+          normalizedProfilePhotoBase64,
         );
       }
+
+      const telefoneCompleto =
+        onlyDigits(telefoneDDD) + onlyDigits(telefoneUsuario);
 
       const prestadorPayload = {
         usuario: { id: Number(user.id) },
         nome,
-        cpf: String(cpf || "").replace(/\D/g, ""),
+        cpf: onlyDigits(cpf),
         dataNascimento: birthDate
           ? String(birthDate).includes("T")
             ? birthDate
             : `${birthDate}T00:00:00`
           : undefined,
         genero: gender || "Não informado",
-        telefone: telefoneUsuario || contatosParaEnviar?.[0]?.valor || "",
+        telefone: telefoneCompleto || onlyDigits(contatosParaEnviar?.[0]?.valor || ""),
         logradouro,
         numeroResidencial: numero,
         complemento,
-        cep,
+        cep: onlyDigits(cep),
         bairro,
         cidade: municipio,
         uf: estado,
@@ -440,7 +469,7 @@ export default function Workinfo() {
       }
 
       if (contatosParaEnviar.length > 0) {
-        const contatosComResultado = await Promise.allSettled(
+        await Promise.allSettled(
           contatosParaEnviar.map(async (contato) => {
             const contatoPayload = {
               prestadorId,
@@ -464,17 +493,6 @@ export default function Workinfo() {
             });
           }),
         );
-
-        const falhas = contatosComResultado.filter(
-          (item) => item.status === "rejected",
-        );
-
-        if (falhas.length > 0) {
-          Alert.alert(
-            "Atenção",
-            `${falhas.length} contato(s) não foram salvos. Os demais foram atualizados.`,
-          );
-        }
       }
 
       Alert.alert(
@@ -511,7 +529,7 @@ export default function Workinfo() {
         {loadingData ? (
           <Text style={styles.loadingText}>Carregando informações...</Text>
         ) : (
-          <View>
+          <View style={styles.formGroup}>
             <View style={styles.photoContainer}>
               <ProfilePhoto
                 size={120}
@@ -535,6 +553,30 @@ export default function Workinfo() {
               icon="document-text-outline"
             />
 
+            <Input
+              label="CPF"
+              value={cpf}
+              editable={false}
+              icon="card-outline"
+            />
+
+            <View style={styles.rowInputs}>
+              <Input
+                label="DDD"
+                value={telefoneDDD}
+                onChangeText={(text) => setTelefoneDDD(maskDDD(text))}
+                width="21%"
+                keyboardType="numeric"
+              />
+              <Input
+                label="Telefone"
+                value={telefoneUsuario}
+                onChangeText={(text) => setTelefoneUsuario(maskPhone(text))}
+                width="75%"
+                keyboardType="numeric"
+              />
+            </View>
+
             <View style={styles.categoriaContainer}>
               {contatos.length < 5 && (
                 <>
@@ -542,7 +584,10 @@ export default function Workinfo() {
                     label="Contato"
                     icon="at-outline"
                     selectedValue={tipoSelecionado}
-                    onValueChange={setTipoSelecionado}
+                    onValueChange={(val) => {
+                      setTipoSelecionado(val);
+                      setValorContato("");
+                    }}
                     options={[
                       { label: "Selecione...", value: "" },
                       { label: "Whatsapp", value: "Whatsapp" },
@@ -554,9 +599,24 @@ export default function Workinfo() {
                   {tipoSelecionado !== "" && (
                     <View style={{ marginTop: 10 }}>
                       <Input
-                        placeholder="Digite o contato..."
+                        placeholder={
+                          tipoSelecionado === "Whatsapp"
+                            ? "Ex: 99999-9999"
+                            : "Digite o usuário (ex: seu.usuario)"
+                        }
                         value={valorContato}
-                        onChangeText={setValorContato}
+                        onChangeText={(text) => {
+                          if (tipoSelecionado === "Whatsapp") {
+                            setValorContato(maskPhone(text));
+                          } else {
+                            setValorContato(text);
+                          }
+                        }}
+                        onBlur={handleBlurContato}
+                        keyboardType={
+                          tipoSelecionado === "Whatsapp" ? "numeric" : "default"
+                        }
+                        autoCapitalize="none"
                       />
 
                       <TouchableOpacity
@@ -577,7 +637,9 @@ export default function Workinfo() {
                 >
                   <View>
                     <Text style={styles.contatoTipo}>{item.tipo}</Text>
-                    <Text style={styles.contatoValor}>{item.valor}</Text>
+                    <Text style={styles.contatoValor}>
+                      {item.tipo !== "Whatsapp" ? `@${item.valor}` : item.valor}
+                    </Text>
                   </View>
 
                   <TouchableOpacity onPress={() => removerContato(index)}>
@@ -592,31 +654,26 @@ export default function Workinfo() {
               value={formatCep(cep)}
               onChangeText={handleCepChange}
               icon="location-outline"
+              keyboardType="numeric"
             />
 
             {loadingCep && <Text>Buscando CEP...</Text>}
             {erroCep && <Text style={styles.errorCep}>{erroCep}</Text>}
 
             <View style={styles.rowInputs}>
-              <SelectInput
-                label="Estado"
-                selectedValue={estado}
-                onValueChange={setEstado}
-                options={[
-                  { label: "Selecione...", value: "" },
-                  { label: "SP - São Paulo", value: "SP" },
-                  { label: "RJ - Rio de Janeiro", value: "RJ" },
-                  { label: "MG - Minas Gerais", value: "MG" },
-                  { label: "PR - Paraná", value: "PR" },
-                ]}
-                width={"31%"}
-              />
+              <View style={styles.estadoContainer}>
+                <Input
+                  label="Estado"
+                  value={estado}
+                  editable={false}
+                />
+              </View>
 
               <View style={styles.municipioContainer}>
                 <Input
                   label="Cidade"
                   value={municipio}
-                  onChangeText={setMunicipio}
+                  editable={false}
                 />
               </View>
             </View>
@@ -647,7 +704,7 @@ export default function Workinfo() {
               <Input
                 label="Data de nascimento"
                 value={birthDate ? String(birthDate).split("T")[0] : ""}
-                onChangeText={setBirthDate}
+                editable={false}
                 width={"48%"}
               />
               <SelectInput
@@ -658,12 +715,6 @@ export default function Workinfo() {
                 width={"48%"}
               />
             </View>
-
-            <Input
-              label="Telefone"
-              value={telefoneUsuario}
-              onChangeText={setTelefoneUsuario}
-            />
 
             <SelectInput
               label="Categoria"
@@ -700,6 +751,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
   container: { flex: 1 },
   content: { padding: 20, gap: 20 },
+  formGroup: { gap: 12 },
   backButton: {
     position: "absolute",
     left: 25,
@@ -714,6 +766,9 @@ const styles = StyleSheet.create({
   rowInputs: {
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  estadoContainer: {
+    width: "31%",
   },
   municipioContainer: {
     width: "65%",

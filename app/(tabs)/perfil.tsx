@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import {
   Alert,
   ImageBackground,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -16,7 +17,10 @@ import { useAuth } from "../../src/context/AuthContext";
 
 export default function Perfil() {
   const router = useRouter();
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
+
+  const FORMS_URL =
+    "https://docs.google.com/forms/d/e/1FAIpQLSdGP9PZDXYMJVUacDK0O_-3uU-syLAvq3WLtg9W_3dzG3fShA/viewform";
 
   const handleLogout = async () => {
     try {
@@ -24,6 +28,15 @@ export default function Perfil() {
       router.replace("/(auth)");
     } catch {
       Alert.alert("Erro", "Não foi possível sair da conta.");
+    }
+  };
+
+  const handleFaleConosco = async () => {
+    const supported = await Linking.canOpenURL(FORMS_URL);
+    if (supported) {
+      await Linking.openURL(FORMS_URL);
+    } else {
+      Alert.alert("Erro", "Não foi possível abrir o link do formulário.");
     }
   };
 
@@ -36,13 +49,9 @@ export default function Perfil() {
 
         <View style={styles.content}>
           <View style={styles.contentheader}>
-            <Ionicons
-              name="cog-outline"
-              size={24}
-              color="#333"
-              style={{ marginRight: 13, marginLeft: 12 }}
-            />
-            <Text style={typography.cardtext}>Configurações</Text>
+            <Text style={[typography.title, { fontSize: 20, color: "#F05221" }]}>
+              Minha conta
+            </Text>
           </View>
 
           <View style={styles.contentbody}>
@@ -51,32 +60,43 @@ export default function Perfil() {
               onPress={() => router.push("/(telas)/personalinfo")}
             >
               <Ionicons
-                name="person-circle-outline"
-                size={24}
+                name="person-outline"
+                size={22}
                 color="#333"
-                style={{ marginRight: 13, marginLeft: 12 }}
+                style={styles.icon}
               />
-              <Text style={typography.cardtext}>Informações pessoais</Text>
+              <Text style={typography.cardtext}>Informações de usuário</Text>
             </Pressable>
+
             <Pressable
               style={styles.buttons}
               onPress={() => router.push("/(telas)/workinfo")}
             >
               <Ionicons
-                name="person-circle-outline"
-                size={24}
+                name="briefcase-outline"
+                size={22}
                 color="#333"
-                style={{ marginRight: 5, marginLeft: 12 }}
+                style={styles.icon}
               />
-              <Text style={typography.cardtext}>Informações de prestador</Text>
+              <Text style={typography.cardtext}>Gerenciar perfil</Text>
+            </Pressable>
+
+            <Pressable style={styles.buttons} onPress={handleFaleConosco}>
+              <Ionicons
+                name="chatbubbles-outline"
+                size={22}
+                color="#333"
+                style={styles.icon}
+              />
+              <Text style={typography.cardtext}>Fale conosco</Text>
             </Pressable>
 
             <Pressable style={styles.buttons} onPress={handleLogout}>
               <Ionicons
                 name="log-out-outline"
-                size={24}
+                size={22}
                 color="#333"
-                style={{ marginRight: 18, marginLeft: 12 }}
+                style={styles.icon}
               />
               <Text style={typography.cardtext}>Desconectar</Text>
             </Pressable>
@@ -92,69 +112,52 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+  background: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
   content: {
-    width: 260,
-    minHeight: 290,
-    marginTop: 150,
-
+    width: 280,
+    marginTop: 140,
     backgroundColor: "#fff",
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    borderRadius: 12,
     alignSelf: "center",
-    gap: 8,
-    flexDirection: "column",
-
+    paddingVertical: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
   },
   contentheader: {
-    padding: 10,
+    paddingBottom: 12,
     width: "100%",
-    borderRadius: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-    justifyContent: "center",
+    borderBottomColor: "#eee",
     alignItems: "center",
-    alignSelf: "center",
   },
   contentbody: {
-    flex: 1,
     width: "100%",
-    justifyContent: "center",
     alignItems: "center",
-    alignSelf: "center",
-    borderRadius: 8,
-    gap: 20,
-    marginBottom: 20,
-    paddingTop: 20,
-  },
-  background: {
-    flex: 1,
-    width: "100%",
-    height: "auto"
+    gap: 12,
+    paddingTop: 16,
   },
   buttons: {
     width: "90%",
-    height: 50,
+    height: 48,
     backgroundColor: "#fff",
     borderRadius: 8,
-    justifyContent: "flex-start",
     alignItems: "center",
     flexDirection: "row",
-
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 6,
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  userInfo: {
-    marginTop: 6,
-    fontSize: 13,
-    color: "#666",
+  icon: {
+    marginRight: 12,
+    marginLeft: 14,
   },
 });
