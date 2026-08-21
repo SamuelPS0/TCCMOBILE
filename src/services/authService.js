@@ -8,6 +8,7 @@ function normalizeUsuario(usuario) {
     email: usuario?.username,
     nivelAcesso: usuario?.nivelAcesso,
     statusUsuario: usuario?.statusUsuario,
+    foto: usuario?.foto,
   };
 }
 

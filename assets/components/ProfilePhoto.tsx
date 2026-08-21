@@ -2,11 +2,15 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import React from "react";
 import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  buildPickedImageData,
+  PickedImageData,
+} from "../../src/utils/imagePickerAsset";
 
 interface ProfilePhotoProps {
   size?: number;
   imageUri?: string | null;
-  onChangeImage?: (data: { uri: string; base64: string | null }) => void;
+  onChangeImage?: (data: PickedImageData) => void;
   editable?: boolean;
 }
 
@@ -34,11 +38,8 @@ export const ProfilePhoto = ({
 
     if (!result.canceled) {
       const asset = result.assets[0];
-
-      onChangeImage?.({
-        uri: asset.uri,
-        base64: asset.base64 ?? null,
-      });
+      const imageData = await buildPickedImageData(asset);
+      onChangeImage?.(imageData);
     }
   };
 
@@ -47,6 +48,7 @@ export const ProfilePhoto = ({
       onPress={pickPhoto}
       style={{ width: size, height: size }}
       activeOpacity={0.8}
+      disabled={!editable}
     >
       {imageUri ? (
         <Image

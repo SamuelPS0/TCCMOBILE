@@ -361,20 +361,33 @@ export default function Cadastro() {
               error={fieldErrors.senha}
             />
 
-            <View style={styles.passwordRequirements}>
-              {passwordRequirements.map((requirement) => (
-                <Text
-                  key={requirement.label}
-                  style={[
-                    styles.passwordRequirementText,
-                    requirement.isValid
-                      ? styles.passwordRequirementValid
-                      : styles.passwordRequirementInvalid,
-                  ]}
-                >
-                  {requirement.isValid ? "✓" : "✕"} {requirement.label}
-                </Text>
-              ))}
+            <View style={styles.rulesGrid}>
+              {passwordRequirements.map((requirement) => {
+                const valid = requirement.isValid;
+                return (
+                  <View 
+                    key={requirement.label} 
+                    style={[
+                      styles.ruleBadge, 
+                      { backgroundColor: valid ? '#e8f5e9' : '#fbe9e7' }
+                    ]}
+                  >
+                    <Ionicons 
+                      name={valid ? "checkmark-circle" : "close-circle"} 
+                      size={16} 
+                      color={valid ? "#2e7d32" : "#d32f2f"} 
+                    />
+                    <Text 
+                      style={[
+                        styles.ruleText, 
+                        { color: valid ? '#2e7d32' : '#d32f2f' }
+                      ]}
+                    >
+                      {requirement.label}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
 
@@ -547,25 +560,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  passwordRequirements: {
-    width: "100%",
-    marginTop: -2,
+  rulesGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 8,
     marginBottom: 4,
+    gap: 8,
   },
 
-  passwordRequirementText: {
-    color: "#777",
+  ruleBadge: {
+    width: "48%",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 6,
+  },
+
+  ruleText: {
     fontSize: 12,
-    marginTop: 2,
-  },
-
-  passwordRequirementValid: {
-    color: "#168821",
     fontWeight: "600",
-  },
-
-  passwordRequirementInvalid: {
-    color: "#C62828",
   },
 
   checkboxes: {

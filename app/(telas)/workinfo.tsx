@@ -28,6 +28,7 @@ import {
   updateUsuarioFoto,
 } from "../../src/services/prestadorService";
 import { normalizeContactLink } from "../../src/utils/contactLinks";
+import { getPickedImageDebugInfo } from "../../src/utils/imagePickerAsset";
 
 type ContatoItem = {
   id?: number;
@@ -216,7 +217,6 @@ export default function Workinfo() {
       }
 
       try {
-        // 1. CARREGAMENTO E FORMATAÇÃO DA FOTO DO USUÁRIO
         let rawFoto = user?.foto || null;
         try {
           const usuarioRes = await globalapi.get(`usuario/${user.id}`);
@@ -239,7 +239,6 @@ export default function Workinfo() {
           setProfileImage({ uri: uriFinal, base64: rawFoto });
         }
 
-        // 2. BUSCA O PRESTADOR
         const prestador = await getPrestadorByUsuario(user.id);
         if (!prestador?.id) {
           Alert.alert(
@@ -257,7 +256,6 @@ export default function Workinfo() {
             "EM_ANALISE",
         );
 
-        // 3. BUSCA SERVIÇOS (COM TRATAMENTO DEFENSIVO DE 404)
         let servicos = [];
         try {
           servicos = await getServicosByPrestador(prestador.id);
@@ -267,7 +265,6 @@ export default function Workinfo() {
           }
         }
 
-        // 4. BUSCA CONTATOS
         let contatosTodos = [];
         try {
           const contatoRes = await globalapi.get("contato");
@@ -356,7 +353,11 @@ export default function Workinfo() {
     try {
       setLoading(true);
 
-      // Tratamento para atualizar a foto do usuário (igual ao AccCreate.tsx)
+      console.log(
+        "[workinfo] Foto de perfil selecionada:",
+        getPickedImageDebugInfo(profileImage),
+      );
+
       const profilePhotoBase64 = profileImage?.base64 || null;
       const normalizedProfilePhotoBase64 =
         typeof profilePhotoBase64 === "string" &&
@@ -375,7 +376,12 @@ export default function Workinfo() {
             "Erro ao atualizar foto do usuário:",
             photoError?.message,
           );
+          throw photoError;
         }
+      } else if (profileImage?.uri && !profileImage?.uri.startsWith("http")) {
+        throw new Error(
+          "Foto de perfil selecionada sem dados Base64 para envio",
+        );
       }
 
       const prestadorPayload = {
@@ -435,7 +441,7 @@ export default function Workinfo() {
 
       if (contatosParaEnviar.length > 0) {
         const contatosComResultado = await Promise.allSettled(
-          contatosParaEnviar.map(async (contato, index) => {
+          contatosParaEnviar.map(async (contato) => {
             const contatoPayload = {
               prestadorId,
               tipoContato: contato.tipo,

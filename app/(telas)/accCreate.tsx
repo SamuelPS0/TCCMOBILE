@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { buscarCep } from "../../assets/api/apiviacep";
-import { globalapi, sanitizeForLog } from "../../assets/api/globalapi";
+import { globalapi } from "../../assets/api/globalapi";
 import BottomNav from "../../assets/components/BottomNav";
 import { Button } from "../../assets/components/Button";
 import { Header } from "../../assets/components/Header";
@@ -28,6 +28,7 @@ import {
   getPendingPrestadorProfile,
 } from "../../src/storage/onboardingStorage";
 import { normalizeContactLink } from "../../src/utils/contactLinks";
+import { getPickedImageDebugInfo } from "../../src/utils/imagePickerAsset";
 
 async function saveWithFallback(options: {
   method: "put" | "post";
@@ -268,6 +269,11 @@ export default function AccCreate() {
       setLoading(true);
 
       console.log("=== SUBMIT START ===");
+      console.log(
+        "[accCreate] Foto de perfil selecionada:",
+        getPickedImageDebugInfo(profileImage),
+      );
+
       const profilePhotoBase64 = profileImage?.base64 || null;
       const normalizedProfilePhotoBase64 =
         typeof profilePhotoBase64 === "string" &&
@@ -277,10 +283,15 @@ export default function AccCreate() {
 
       if (normalizedProfilePhotoBase64) {
         try {
-          await updateUsuarioFoto(Number(userId), normalizedProfilePhotoBase64);
+          const usuarioComFoto = await updateUsuarioFoto(
+            Number(userId),
+            normalizedProfilePhotoBase64,
+          );
+          console.log("[accCreate] Foto do usuário salva:", {
+            userId: Number(userId),
+            fotoRetornada: !!usuarioComFoto?.foto,
+          });
         } catch (photoError: any) {
-          console.log("WARN FOTO USUARIO:", photoError?.message || photoError);
-
           console.error("[accCreate] Erro ao enviar foto do usuário", {
             endpointTentado: "/usuario/{id}/foto",
             userId: Number(userId),
@@ -289,7 +300,12 @@ export default function AccCreate() {
             message: photoError?.message ?? "sem mensagem",
             responseData: photoError?.response?.data ?? "sem body",
           });
+          throw photoError;
         }
+      } else if (profileImage?.uri) {
+        throw new Error(
+          "Foto de perfil selecionada sem dados Base64 para envio",
+        );
       }
 
       const prestadorPayload = {
@@ -313,8 +329,6 @@ export default function AccCreate() {
         statusPrestador: "EM_ANALISE",
         status_prestador: "EM_ANALISE",
       };
-
-      console.log("PRESTADOR:", prestadorPayload);
 
       const prestadorExistente = await getPrestadorByUsuario(Number(userId));
       const prestadorSalvo = prestadorExistente?.id
@@ -360,6 +374,13 @@ export default function AccCreate() {
         ? servicosExistentes[0]
         : null;
 
+      // ==========================================
+      // 🔍 DEBUGGERS IMAGEM DO SERVIÇO
+      // ==========================================
+      console.log("🔍 [DEBUG IMAGEM SERVICO] Objeto eventImage bruto:", eventImage);
+      console.log("🔍 [DEBUG IMAGEM SERVICO] eventImage?.base64 (tipo):", typeof eventImage?.base64);
+      console.log("🔍 [DEBUG IMAGEM SERVICO] eventImage?.base64 (tamanho):", eventImage?.base64 ? eventImage.base64.length : 0);
+
       const servicoPayload = {
         nome,
         descricao,
@@ -368,11 +389,6 @@ export default function AccCreate() {
         categoriaId: Number(categoria),
         foto: eventImage?.base64 || servicoExistente?.foto || null,
       };
-
-      console.log("SERVICO:", {
-        ...servicoPayload,
-        foto: servicoPayload.foto ? "[BASE64 OK]" : null,
-      });
 
       if (servicoExistente?.id) {
         await saveWithFallback({
@@ -389,8 +405,8 @@ export default function AccCreate() {
       }
 
       if (contatosParaEnviar.length > 0) {
-        const contatosComResultado = await Promise.allSettled(
-          contatosParaEnviar.map(async (contato, index) => {
+        await Promise.allSettled(
+          contatosParaEnviar.map(async (contato) => {
             const contatoPayload = {
               prestadorId,
               tipoContato: contato.tipo,
@@ -399,60 +415,13 @@ export default function AccCreate() {
             };
 
             const endpointPrimario = "contato";
-            let endpointFinal = endpointPrimario;
-
-            console.log(
-              `[CONTATO ${index + 1}] endpoint inicial:`,
+            const response = await globalapi.post(
               endpointPrimario,
+              contatoPayload,
             );
-            console.log(
-              `[CONTATO ${index + 1}] payload final:`,
-              sanitizeForLog(contatoPayload),
-            );
-
-            try {
-              const response = await globalapi.post(
-                endpointPrimario,
-                contatoPayload,
-              );
-              console.log(
-                `[CONTATO ${index + 1}] resposta sucesso (${endpointFinal}):`,
-                sanitizeForLog(response.data),
-              );
-              return { endpointFinal, response: response.data };
-            } catch (errorContato: any) {
-              console.log(`[CONTATO ${index + 1}] falha:`, {
-                endpointFinal,
-                status: errorContato?.response?.status ?? "sem status",
-                message: errorContato?.message ?? "sem mensagem",
-                responseData: sanitizeForLog(
-                  errorContato?.response?.data ?? null,
-                ),
-              });
-              throw errorContato;
-            }
+            return { endpointFinal: endpointPrimario, response: response.data };
           }),
         );
-
-        const falhasContato = contatosComResultado
-          .map((result, index) => ({ result, index }))
-          .filter((item) => item.result.status === "rejected");
-
-        if (falhasContato.length > 0) {
-          console.warn("[accCreate] Alguns contatos não foram salvos", {
-            totalContatos: contatosParaEnviar.length,
-            contatosComFalha: falhasContato.length,
-            detalhes: falhasContato.map(({ result, index }) => ({
-              contatoIndex: index + 1,
-              motivo:
-                result.status === "rejected"
-                  ? (result.reason?.response?.data?.message ??
-                    result.reason?.message ??
-                    "Falha desconhecida")
-                  : "",
-            })),
-          });
-        }
       }
 
       await clearPendingPrestadorProfile();
@@ -465,25 +434,13 @@ export default function AccCreate() {
       });
     } catch (error: any) {
       console.log("=== ERROR ===");
-      console.log(error?.response?.data || error.message);
+      console.log("🔍 [DEBUG ERRO API Detalhado]:", error?.response?.data || error.message);
 
       console.error("[accCreate] DEBUG - Erro no cadastro de perfil", {
         status: error?.response?.status ?? "sem status",
         url: error?.config?.url ?? "sem url",
         message: error?.message ?? "sem mensagem",
         responseData: error?.response?.data ?? "sem body",
-        prestador: {
-          nome,
-          cpf: cpfFinal,
-          cidade: municipio,
-          uf: estado,
-          contato: contatos?.[0]?.valor || null,
-        },
-        servico: {
-          nome,
-          categoriaId: Number(categoria),
-          temFotoEvento: !!eventImage?.base64,
-        },
       });
 
       alert(error?.response?.data?.message || "Erro ao criar perfil");
@@ -495,7 +452,6 @@ export default function AccCreate() {
   // =========================
   // LOAD USER
   // =========================
-
   const paramUserId = params.userId;
   const paramCpf = params.cpf;
 
@@ -751,7 +707,7 @@ export default function AccCreate() {
           <View style={styles.buttonContainer}>
             <Button onPress={handleSubmit} disabled={loading}>
               <Text style={typography.buttonText}>
-                {loading ? "Enviando..." : "Concluir"}
+                {loading ? "Criando..." : "Cadastrar Perfil"}
               </Text>
             </Button>
           </View>
@@ -827,11 +783,6 @@ const styles = StyleSheet.create({
   },
 
   remover: {
-    color: "red",
-  },
-
-  limiteTexto: {
-    marginTop: 10,
     color: "red",
   },
 

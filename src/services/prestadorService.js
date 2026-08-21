@@ -35,19 +35,11 @@ export const getPrestadorByUsuario = async (usuarioId) => {
     )[0];
 
     if (prestadorMaisRecenteInativo) return prestadorMaisRecenteInativo;
-  } catch (listError) {
-    console.log("WARN getPrestadorByUsuario list fallback:", listError);
-  }
 
-  // fallback para backends que possuem endpoint dedicado
-  try {
-    const response = await globalapi.get(`prestador/usuario/${usuarioId}`);
-    return response.data;
-  } catch (directError) {
-    if (directError?.response?.status === 404) {
-      return null;
-    }
-    throw directError;
+    return null;
+  } catch (error) {
+    console.log("WARN getPrestadorByUsuario error:", error);
+    return null;
   }
 };
 
@@ -62,17 +54,23 @@ export const getServicosByPrestador = async (prestadorId) => {
     return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     if (error?.response?.status === 404) {
-      const fallback = await globalapi.get("servico");
-      const lista = Array.isArray(fallback.data) ? fallback.data : [];
+      try {
+        const fallback = await globalapi.get("servico");
+        const lista = Array.isArray(fallback.data) ? fallback.data : [];
 
-      return lista.filter(
-        (item) =>
-          Number(
-            item?.prestadorId ?? item?.prestador_id ?? item?.prestador?.id,
-          ) === Number(prestadorId),
-      );
+        return lista.filter(
+          (item) =>
+            Number(
+              item?.prestadorId ?? item?.prestador_id ?? item?.prestador?.id,
+            ) === Number(prestadorId),
+        );
+      } catch (fallbackError) {
+        console.log("WARN getServicosByPrestador fallback error:", fallbackError);
+        return [];
+      }
     }
-    throw error;
+    console.log("WARN getServicosByPrestador error:", error);
+    return [];
   }
 };
 
@@ -81,6 +79,10 @@ export const updateUsuarioFoto = async (userId, fotoBase64) => {
     typeof fotoBase64 === "string" && fotoBase64.startsWith("data:")
       ? fotoBase64.split(",")[1] || fotoBase64
       : fotoBase64;
+
+  if (!fotoNormalizada) {
+    throw new Error("FOTO_USUARIO_BASE64_AUSENTE");
+  }
 
   const payload = { foto: fotoNormalizada };
   const endpoints = [`usuario/${userId}/foto`];
@@ -104,7 +106,6 @@ export function normalizeImageUri(value) {
   if (!value) return null;
 
   const trimmed = String(value).trim();
-
   if (!trimmed) return null;
 
   if (
