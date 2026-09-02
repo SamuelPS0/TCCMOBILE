@@ -52,6 +52,22 @@ function maskPhone(value: string) {
   return digits.replace(/(\d{5})(\d+)/, "$1-$2");
 }
 
+// Máscara para WhatsApp no formato (00) 00000-0000
+function maskWhatsApp(value: string) {
+  const digits = onlyDigits(value).slice(0, 11);
+
+  if (digits.length <= 2) {
+    return digits.replace(/^(\d{0,2})/, "($1");
+  }
+  if (digits.length <= 6) {
+    return digits.replace(/^(\d{2})(\d{0,4})/, "($1) $2");
+  }
+  if (digits.length <= 10) {
+    return digits.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+  }
+  return digits.replace(/^(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+}
+
 function getPasswordRequirements(value: string) {
   return [
     { label: "Mínimo de 6 caracteres", isValid: value.length >= 6 },
@@ -75,6 +91,7 @@ export default function Cadastro() {
   const [nome, setNome] = useState("");
   const [telefoneDDD, setTelefoneDDD] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [whatsapp, setWhatsapp] = useState(""); // Estado para o WhatsApp caso utilize um campo próprio
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -324,6 +341,19 @@ export default function Cadastro() {
               error={fieldErrors.telefone}
             />
           </View>
+
+          {/* Exemplo de uso caso queira adicionar um campo exclusivo para WhatsApp */}
+          <Input
+            label="WhatsApp"
+            value={whatsapp}
+            onChangeText={(text) => {
+              setWhatsapp(maskWhatsApp(text));
+              setFieldErrors((prev) => ({ ...prev, whatsapp: "" }));
+            }}
+            keyboardType="numeric"
+            placeholder="(00) 00000-0000"
+            error={fieldErrors.whatsapp}
+          />
 
           <Input
             label="CPF*"

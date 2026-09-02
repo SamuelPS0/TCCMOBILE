@@ -90,27 +90,30 @@ function isStrongPassword(value: string) {
   return getPasswordRequirements(value).every((req) => req.isValid);
 }
 
-async function upsertUsuario(userId: number, payload: Record<string, any>) {
-  const formData = new FormData();
+async function upsertUsuario(
+  userId: number,
+  payload: Record<string, any>,
+) {
+  try {
+    console.log("PUT USUARIO:", `usuario/${userId}/dados`);
+    console.log("PAYLOAD:", payload);
 
-  if (Platform.OS === "web") {
-    const jsonBlob = new Blob([JSON.stringify(payload)], {
-      type: "application/json",
-    });
-    formData.append("usuario", jsonBlob);
-  } else {
-    formData.append("usuario", JSON.stringify(payload) as any);
+    const response = await globalapi.put(
+      `usuario/${userId}/dados`,
+      payload,
+    );
+
+    console.log("RESPOSTA USUARIO:", response.status, response.data);
+
+    return response.data;
+  } catch (error: any) {
+    console.log("ERRO USUARIO:", error);
+    console.log("STATUS:", error?.response?.status);
+    console.log("DATA:", error?.response?.data);
+    console.log("MESSAGE:", error?.message);
+    throw error;
   }
-
-  const response = await globalapi.put(`usuario/${userId}`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-
-  return response.data;
 }
-
 async function upsertPrestador(
   prestadorId: number,
   payload: Record<string, any>,
@@ -281,15 +284,18 @@ export default function Personalinfo() {
     try {
       setLoading(true);
 
-      const usuarioPayload: Record<string, any> = {
-        nome: nomeTrim,
-        username: emailTrim,
-        email: emailTrim,
-      };
+const usuarioPayload: Record<string, any> = {
+  nome: nomeTrim,
+};
 
-      if (senha.trim().length > 0) {
-        usuarioPayload.senha = senha.trim();
-      }
+if (senha.trim().length > 0) {
+  usuarioPayload.password = senha.trim();
+}
+console.log("ENVIANDO USUARIO:", usuarioPayload);
+console.log(
+  "URL USUARIO:",
+  `usuario/${user.id}/dados`
+);
 
       await upsertUsuario(Number(user.id), usuarioPayload);
 
