@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 
-import { globalapi } from "../../assets/api/globalapi";
+import { formatApiError, globalapi } from "../../assets/api/globalapi";
 import { Button } from "../../assets/components/Button";
 import { CheckboxInput } from "../../assets/components/CheckboxInput";
 import { DateInput } from "../../assets/components/DateInput";
@@ -241,7 +241,7 @@ export default function Cadastro() {
       } else if (error.response?.status === 409) {
         Alert.alert("Erro", "Email já está em uso.");
       } else {
-        Alert.alert("Erro", "Erro ao finalizar cadastro.");
+        Alert.alert("Erro ao finalizar cadastro", formatApiError(error));
       }
     } finally {
       setLoading(false);

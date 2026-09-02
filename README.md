@@ -84,12 +84,100 @@ npm install
 npx expo start
 3) Scripts disponíveis
 npm run start
-4) Configuração de API (ambiente local)
-A URL base da API está definida em:
-assets/api/globalapi.js
+4) Configuração de API
 
-Valor atual:
-http://10.0.2.2:8080/api/v1/
+### Arquitetura de comunicação
+
+Todas as chamadas ao backend DivulgAí usam a mesma instância `globalapi`, em
+`assets/api/globalapi.js`. A URL é definida uma única vez por
+`EXPO_PUBLIC_API_URL`; login, cadastro, prestadores, serviços, perfis, feedbacks,
+contatos, categorias e recuperação de senha usam essa instância. Nenhuma tela deve
+usar `localhost`, IP de rede ou porta do backend diretamente.
+
+As integrações abaixo não pertencem à API DivulgAí e ainda requerem acesso à
+Internet: consulta de CEP (ViaCEP), localidades (IBGE), links sociais/WhatsApp,
+Google Forms e imagens remotas de placeholder.
+
+### Ambientes
+
+Copie `.env.example` para `.env.local` e escolha a URL do ambiente. Não coloque
+senhas, tokens privados ou a string de conexão do banco nesse arquivo: variáveis
+`EXPO_PUBLIC_*` ficam visíveis no aplicativo.
+
+```dotenv
+# Demonstração e produção: URL pública, estável e HTTPS (recomendado)
+EXPO_PUBLIC_API_URL=https://api.seu-dominio.example/api/v1/
+
+# Desenvolvimento apenas no Android Emulator (AVD): opcional, pois é o padrão.
+# EXPO_PUBLIC_API_URL=http://10.0.2.2:8080/api/v1/
+
+# Desenvolvimento em celular físico na mesma LAN: não serve para redes distintas.
+# EXPO_PUBLIC_API_URL=http://192.168.0.10:8080/api/v1/
+```
+
+Após mudar a variável, reinicie o bundler para gerar um novo bundle:
+
+```bash
+npx expo start --tunnel -c
+```
+
+`10.0.2.2` é um alias do **emulador Android** para o computador. `localhost`
+no celular aponta para o próprio celular. Endereços `192.168.*`, `10.*` e
+`172.16.*` são redes privadas: não funcionam quando computador e celular estão em
+Wi-Fi/dados móveis/redes diferentes. O modo `--tunnel` do Expo disponibiliza o
+Metro/JavaScript, mas **não** torna o Spring Boot na porta `8080` público.
+
+### Estratégia recomendada para apresentação
+
+Para uma demonstração confiável, publique o backend e o banco em uma infraestrutura
+acessível pela Internet e use um domínio HTTPS estável em `EXPO_PUBLIC_API_URL`.
+Essa é também a estratégia adequada para publicação real. O backend precisa aceitar
+requisições da origem do frontend web configurada (CORS) e usar uma URL HTTPS pública
+para imagens, se ele retornar URLs de arquivos.
+
+Como alternativa temporária, exponha o Spring Boot por um túnel HTTPS de um serviço
+como Cloudflare Tunnel ou ngrok e copie a URL gerada para `.env.local`. Essa opção
+funciona entre redes distintas, mas normalmente a URL muda ao reiniciar o túnel; por
+isso é menos segura para uma apresentação do que um domínio/deploy estável. Não
+exponha SQL Server diretamente: somente a API deve ser pública.
+
+### Diagnóstico e teste antes da apresentação
+
+O cliente registra a URL completa, base URL, status e corpo da resposta (com senhas
+ocultas). Erros sem resposta HTTP exibem orientação também no celular. Em dispositivo
+físico sem `EXPO_PUBLIC_API_URL`, o app bloqueia a chamada com uma mensagem de
+configuração, em vez de tentar silenciosamente `10.0.2.2`.
+
+1. Acesse `https://SEU-DOMINIO/api/v1/...` pelo navegador de um celular usando dados
+   móveis. Uma resposta `401`, `403` ou `405` do endpoint protegido já prova que a
+   rota pública foi alcançada; `Network Error` não prova.
+2. Faça login, cadastro, recuperação de senha, criação/edição de prestador,
+   criação/edição de serviço, atualização de imagem e consulta de feedbacks no
+   celular. Essas são as chamadas da API principal mapeadas no aplicativo.
+3. Abra também a aplicação web apontando para a mesma URL pública e valide o CORS no
+   navegador. React Native não aplica CORS como o browser, por isso este teste é
+   necessário quando existir frontend web separado.
+4. Teste com o computador em uma rede e o celular em dados móveis. Em seguida,
+   reinicie o roteador ou mude o Wi-Fi: a URL pública deve continuar a mesma.
+
+Se o backend registrar `ErrorCode: 4060` e `Não é possível abrir o banco de dados
+"bd_divulgai"`, a rede já pode estar correta, mas o cadastro continuará falhando:
+o login do SQL Server não consegue acessar o banco configurado. Corrija banco,
+usuário, senha e permissões do datasource no `application.properties` ou
+`application.yml` do backend antes da apresentação.
+
+### Plano de contingência
+
+1. Leve o backend já publicado, com banco acessível, HTTPS e uma conta/dados de
+   demonstração previamente testados.
+2. Mantenha um segundo celular em dados móveis para validar o endpoint público e um
+   hotspot pessoal como contingência para o computador/Expo.
+3. Tenha a URL pública atual anotada; se recorrer a um túnel temporário, atualize
+   `.env.local`, reinicie `npx expo start --tunnel -c` e gere um novo QR Code.
+4. Sem Internet no celular, Expo Go aberto por QR Code e APIs remotas não podem ser
+   garantidos. Como contingência real, leve uma build instalada previamente e uma
+   demonstração gravada; ainda assim, recursos que dependem do backend/CEP/e-mail
+   exigem conectividade.
 
 Estrutura do Projeto
 app/
@@ -230,4 +318,3 @@ aumento da visibilidade de autônomos;
 incentivo ao consumo regional;
 
 inclusão digital de pequenos negócios.
-

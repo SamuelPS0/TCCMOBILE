@@ -1,6 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -16,6 +15,11 @@ import {
 } from "react-native";
 
 import { Button } from "../../../assets/components/Button";
+import {
+    API_ENDPOINTS,
+    formatApiError,
+    globalapi,
+} from "../../../assets/api/globalapi";
 import { Header } from "../../../assets/components/Header";
 import { typography } from "../../../assets/globalstyles/fonts";
 
@@ -101,8 +105,8 @@ export default function EsqSenha2() {
 
         setLoadingCodigo(true);
         try {
-            await axios.post(
-                "http://localhost:8080/api/v1/usuario/recuperar-senha/validar-codigo",
+            await globalapi.post(
+                API_ENDPOINTS.passwordReset.validateCode,
                 null,
                 { params: { email, codigo: codigoCompleto } }
             );
@@ -113,7 +117,7 @@ export default function EsqSenha2() {
             });
         } catch (error: any) {
             console.error(error);
-            Alert.alert("Erro", error.response?.data || "Código inválido.");
+            Alert.alert("Erro", formatApiError(error));
         } finally {
             setLoadingCodigo(false);
         }
@@ -126,8 +130,8 @@ export default function EsqSenha2() {
         setLoadingResend(true);
 
         try {
-            await axios.post(
-                "http://localhost:8080/api/v1/usuario/recuperar-senha/enviar-codigo",
+            await globalapi.post(
+                API_ENDPOINTS.passwordReset.sendCode,
                 null,
                 { params: { email } }
             );
@@ -148,7 +152,7 @@ export default function EsqSenha2() {
             inputRefs.current[0]?.focus();
         } catch (error: any) {
             console.error(error);
-            Alert.alert("Erro", error.response?.data || "Erro ao reenviar o código.");
+            Alert.alert("Erro", formatApiError(error));
         } finally {
             setLoadingResend(false);
         }

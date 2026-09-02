@@ -1,6 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -14,6 +13,11 @@ import {
 } from "react-native";
 
 import { Button } from "../../../assets/components/Button";
+import {
+    API_ENDPOINTS,
+    formatApiError,
+    globalapi,
+} from "../../../assets/api/globalapi";
 import { Header } from "../../../assets/components/Header";
 import { Input } from "../../../assets/components/Input";
 import { typography } from "../../../assets/globalstyles/fonts";
@@ -35,8 +39,8 @@ export default function EsqSenha1() {
         setLoading(true);
 
         try {
-            await axios.post(
-                "http://localhost:8080/api/v1/usuario/recuperar-senha/enviar-codigo",
+            await globalapi.post(
+                API_ENDPOINTS.passwordReset.sendCode,
                 null,
                 { params: { email: emailTrimmed } }
             );
@@ -46,7 +50,7 @@ export default function EsqSenha1() {
             router.push("/(auth)/VerificacaoEmail/esqsenha2");
         } catch (error: any) {
             console.error(error);
-            Alert.alert("Erro", error.response?.data || "Erro ao enviar o código.");
+            Alert.alert("Erro", formatApiError(error));
         } finally {
             setLoading(false);
         }

@@ -1,6 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -14,6 +13,11 @@ import {
 } from "react-native";
 
 import { Button } from "../../../assets/components/Button";
+import {
+    API_ENDPOINTS,
+    formatApiError,
+    globalapi,
+} from "../../../assets/api/globalapi";
 import { Header } from "../../../assets/components/Header";
 import { typography } from "../../../assets/globalstyles/fonts";
 
@@ -63,8 +67,8 @@ export default function NovaSenha() {
 
         setLoadingSenha(true);
         try {
-            await axios.post(
-                "http://localhost:8080/api/v1/usuario/recuperar-senha/alterar-senha",
+            await globalapi.post(
+                API_ENDPOINTS.passwordReset.change,
                 null,
                 {
                     params: {
@@ -80,7 +84,7 @@ export default function NovaSenha() {
             router.replace("/");
         } catch (error: any) {
             console.error(error);
-            Alert.alert("Erro", error.response?.data || "Erro ao alterar senha.");
+            Alert.alert("Erro", formatApiError(error));
         } finally {
             setLoadingSenha(false);
         }
