@@ -84,13 +84,16 @@ export default function BottomNav() {
         icon="home"
         label="Home"
         active={isHome}
-        onPress={() => router.push("/(tabs)")}
+        // This navigation bar changes sections; it is not a drill-down action.
+        // Using push here retained every form screen (and its image state) in the
+        // stack each time the user changed section.
+        onPress={() => router.replace("/(tabs)")}
       />
       <TabItem
         icon="person-circle-outline"
         label="Perfil"
         active={isPerfil}
-        onPress={() => router.push("/(telas)/personalinfo")}
+        onPress={() => router.replace("/(telas)/personalinfo")}
       />
     </View>
   );
