@@ -284,7 +284,11 @@ export default function Workinfo() {
           ) {
             uriFinal = `data:image/jpeg;base64,${rawFoto}`;
           }
-          setProfileImage({ uri: uriFinal, base64: rawFoto });
+          // A photo already loaded from the API only needs its URI for preview.
+          // Keeping the original Base64 as well duplicates a potentially large
+          // string in this retained navigation screen and reuploads it on every
+          // unrelated form save. Base64 is kept only for a newly picked photo.
+          setProfileImage({ uri: uriFinal, base64: null });
         }
 
         const prestador = await getPrestadorByUsuario(user.id);
