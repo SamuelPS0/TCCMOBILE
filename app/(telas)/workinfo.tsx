@@ -214,13 +214,13 @@ export default function Workinfo() {
     }
   }, []);
 
-  function handleBlurContato() {
+  const handleBlurContato = useCallback(() => {
     if (tipoSelecionado !== "Whatsapp") {
-      setValorContato(normalizeSocialHandle(valorContato));
+      setValorContato((prev) => normalizeSocialHandle(prev));
     }
-  }
+  }, [tipoSelecionado]);
 
-  function adicionarContato() {
+  const adicionarContato = useCallback(() => {
     if (!tipoSelecionado || !valorContato) return;
     if (contatos.length >= 5) return;
 
@@ -239,196 +239,161 @@ export default function Workinfo() {
 
     setTipoSelecionado("");
     setValorContato("");
-  }
+  }, [tipoSelecionado, valorContato, contatos.length]);
 
-  function removerContato(index: number) {
+  const removerContato = useCallback((index: number) => {
     setContatos((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  useEffect(() => {
-    async function loadCategorias() {
-      try {
-        const res = await globalapi.get("categoria");
-        const lista = res.data
-          .filter((c: any) => c.statusCategoria)
-          .map((c: any) => ({
-            label: c.nome,
-            value: String(c.id),
-          }));
-
-        setCategoriasApi(lista);
-      } catch (error) {
-        console.warn("Erro ao carregar categorias:", error);
-      }
-    }
-
-    loadCategorias();
   }, []);
 
   useEffect(() => {
-   async function loadAllData() {
-  if (!user?.id) {
-    setLoadingData(false);
-    return;
-  }
-
-  try {
-    setLoadingData(true);
-
-    // 1. Carrega as categorias primeiro para garantir que o SelectInput tenha as opções
-    let listaCategorias: any[] = [];
-    try {
-      const res = await globalapi.get("categoria");
-      listaCategorias = res.data
-        .filter((c: any) => c.statusCategoria)
-        .map((c: any) => ({
-          label: c.nome,
-          value: String(c.id),
-        }));
-      setCategoriasApi(listaCategorias);
-    } catch (error) {
-      console.warn("Erro ao carregar categorias:", error);
-    }
-
-    // 2. Busca a foto do usuário
-    let rawFoto = user?.foto || null;
-    try {
-      const usuarioRes = await globalapi.get(`usuario/${user.id}`);
-      if (usuarioRes?.data?.foto) {
-        rawFoto = usuarioRes.data.foto;
+    async function loadAllData() {
+      if (!user?.id) {
+        setLoadingData(false);
+        return;
       }
-    } catch (uErr) {
-      console.warn("Erro ao buscar usuário para foto:", uErr);
-    }
 
-    if (rawFoto) {
-      let uriFinal = rawFoto;
-      if (
-        !rawFoto.startsWith("http") &&
-        !rawFoto.startsWith("data:") &&
-        !rawFoto.startsWith("file:")
-      ) {
-        uriFinal = `data:image/jpeg;base64,${rawFoto}`;
-      }
-      setProfileImage({ uri: uriFinal, base64: rawFoto });
-    }
+      try {
+        setLoadingData(true);
 
-    // 3. Busca o prestador e serviços
-    const prestador = await getPrestadorByUsuario(user.id);
-    if (!prestador?.id) {
-      Alert.alert(
-        "Perfil incompleto",
-        "Você ainda não possui perfil profissional.",
-      );
-      router.replace("/(tabs)");
-      return;
-    }
+        const [categoriasRes, usuarioRes] = await Promise.allSettled([
+          globalapi.get("categoria"),
+          globalapi.get(`usuario/${user.id}`),
+        ]);
 
-    setPrestadorId(prestador.id);
-    setStatusPrestador(
-      prestador?.statusPrestador ??
-        prestador?.status_prestador ??
-        "EM_ANALISE",
-    );
-
-    let servicos = [];
-    try {
-      servicos = await getServicosByPrestador(prestador.id);
-    } catch (servicoErr: any) {
-      if (servicoErr?.response?.status !== 404) {
-        console.warn("Erro ao buscar serviços:", servicoErr);
-      }
-    }
-
-    let contatosTodos = [];
-    try {
-      const contatoRes = await globalapi.get("contato");
-      contatosTodos = Array.isArray(contatoRes?.data)
-        ? contatoRes.data
-        : [];
-    } catch (contatoErr: any) {
-      console.warn("Erro ao buscar contatos:", contatoErr);
-    }
-
-    const servicoAtivo =
-      (Array.isArray(servicos) ? servicos : []).find(
-        (item: any) => item?.statusServico === "ATIVO",
-      ) || servicos?.[0];
-
-    const contatosFiltrados = contatosTodos
-      .filter(
-        (item: any) =>
-          Number(item?.prestadorId ?? item?.prestador?.id) ===
-            Number(prestador.id) && item?.statusContato !== "INATIVO",
-      )
-      .map((item: any) => {
-        let valorFormatado = item?.link || "";
-        if (parseTipoContato(item?.tipoContato) === "Whatsapp") {
-          const digitos = onlyDigits(item?.link || "");
-          const numeroPuro = digitos.startsWith("55") ? digitos.slice(2 + (telefoneDDD.length || 2)) : digitos;
-          valorFormatado = maskPhone(numeroPuro);
-        } else {
-          valorFormatado = normalizeSocialHandle(item?.link || "");
+        if (categoriasRes.status === "fulfilled") {
+          const lista = categoriasRes.value.data
+            .filter((c: any) => c.statusCategoria)
+            .map((c: any) => ({
+              label: c.nome,
+              value: String(c.id),
+            }));
+          setCategoriasApi(lista);
         }
 
-        return {
-          id: item.id,
-          tipo: parseTipoContato(item?.tipoContato),
-          valor: valorFormatado,
-        };
-      });
+        let rawFoto = user?.foto || null;
+        if (usuarioRes.status === "fulfilled" && usuarioRes.value?.data?.foto) {
+          rawFoto = usuarioRes.value.data.foto;
+        }
 
-    setNome(servicoAtivo?.nome || prestador?.nome || "");
-    setDescricao(servicoAtivo?.descricao || "");
-    setCpf(maskCPF(prestador?.cpf || ""));
-    setBirthDate(formatDateFromApi(prestador?.dataNascimento || ""));
-    setGender(prestador?.genero || "");
+        if (rawFoto) {
+          let uriFinal = rawFoto;
+          if (
+            !rawFoto.startsWith("http") &&
+            !rawFoto.startsWith("data:") &&
+            !rawFoto.startsWith("file:")
+          ) {
+            uriFinal = `data:image/jpeg;base64,${rawFoto}`;
+          }
+          setProfileImage({ uri: uriFinal, base64: rawFoto });
+        }
 
-    const telDigitos = onlyDigits(prestador?.telefone || "");
-    if (telDigitos.length >= 10) {
-      setTelefoneDDD(telDigitos.slice(0, 2));
-      setTelefoneUsuario(maskPhone(telDigitos.slice(2)));
-    } else {
-      setTelefoneUsuario(maskPhone(telDigitos));
+        const prestador = await getPrestadorByUsuario(user.id);
+        if (!prestador?.id) {
+          Alert.alert(
+            "Perfil incompleto",
+            "Você ainda não possui perfil profissional.",
+          );
+          router.replace("/(tabs)");
+          return;
+        }
+
+        setPrestadorId(prestador.id);
+        setStatusPrestador(
+          prestador?.statusPrestador ??
+            prestador?.status_prestador ??
+            "EM_ANALISE",
+        );
+
+        const [servicosRes, contatoRes] = await Promise.allSettled([
+          getServicosByPrestador(prestador.id),
+          globalapi.get("contato"),
+        ]);
+
+        let servicos = servicosRes.status === "fulfilled" ? servicosRes.value : [];
+        let contatosTodos =
+          contatoRes.status === "fulfilled" && Array.isArray(contatoRes.value?.data)
+            ? contatoRes.value.data
+            : [];
+
+        const servicoAtivo =
+          (Array.isArray(servicos) ? servicos : []).find(
+            (item: any) => item?.statusServico === "ATIVO",
+          ) || servicos?.[0];
+
+        const contatosFiltrados = contatosTodos
+          .filter(
+            (item: any) =>
+              Number(item?.prestadorId ?? item?.prestador?.id) ===
+                Number(prestador.id) && item?.statusContato !== "INATIVO",
+          )
+          .map((item: any) => {
+            let valorFormatado = item?.link || "";
+            if (parseTipoContato(item?.tipoContato) === "Whatsapp") {
+              const digitos = onlyDigits(item?.link || "");
+              const numeroPuro = digitos.startsWith("55") ? digitos.slice(2 + 2) : digitos;
+              valorFormatado = maskPhone(numeroPuro);
+            } else {
+              valorFormatado = normalizeSocialHandle(item?.link || "");
+            }
+
+            return {
+              id: item.id,
+              tipo: parseTipoContato(item?.tipoContato),
+              valor: valorFormatado,
+            };
+          });
+
+        setNome(servicoAtivo?.nome || prestador?.nome || "");
+        setDescricao(servicoAtivo?.descricao || "");
+        setCpf(maskCPF(prestador?.cpf || ""));
+        setBirthDate(formatDateFromApi(prestador?.dataNascimento || ""));
+        setGender(prestador?.genero || "");
+
+        const telDigitos = onlyDigits(prestador?.telefone || "");
+        if (telDigitos.length >= 10) {
+          setTelefoneDDD(telDigitos.slice(0, 2));
+          setTelefoneUsuario(maskPhone(telDigitos.slice(2)));
+        } else {
+          setTelefoneUsuario(maskPhone(telDigitos));
+        }
+
+        setEstado(prestador?.uf || "");
+        setMunicipio(prestador?.cidade || "");
+        
+        const catId = 
+          servicoAtivo?.categoriaId ?? 
+          servicoAtivo?.categoria_id ?? 
+          servicoAtivo?.categoria?.id ?? 
+          "";
+        setCategoria(catId ? String(catId) : "");
+
+        setCep(prestador?.cep || "");
+        setLogradouro(prestador?.logradouro || "");
+        setNumero(prestador?.numeroResidencial || "");
+        setComplemento(prestador?.complemento || "");
+        setBairro(prestador?.bairro || "");
+        setContatos(contatosFiltrados);
+
+        setServicoId(servicoAtivo?.id || null);
+
+        if (servicoAtivo?.foto) {
+          setEventImage({ uri: normalizeImageUri(servicoAtivo.foto) });
+        }
+      } catch (error: any) {
+        Alert.alert(
+          "Erro",
+          error?.response?.data?.message ||
+            "Não foi possível carregar suas informações profissionais.",
+        );
+      } finally {
+        setLoadingData(false);
+      }
     }
-
-    setEstado(prestador?.uf || "");
-    setMunicipio(prestador?.cidade || "");
-    
-    const catId = 
-      servicoAtivo?.categoriaId ?? 
-      servicoAtivo?.categoria_id ?? 
-      servicoAtivo?.categoria?.id ?? 
-      "";
-    setCategoria(catId ? String(catId) : "");
-
-    setCep(prestador?.cep || "");
-    setLogradouro(prestador?.logradouro || "");
-    setNumero(prestador?.numeroResidencial || "");
-    setComplemento(prestador?.complemento || "");
-    setBairro(prestador?.bairro || "");
-    setContatos(contatosFiltrados);
-
-    setServicoId(servicoAtivo?.id || null);
-
-    if (servicoAtivo?.foto) {
-      setEventImage({ uri: normalizeImageUri(servicoAtivo.foto) });
-    }
-  } catch (error: any) {
-    Alert.alert(
-      "Erro",
-      error?.response?.data?.message ||
-        "Não foi possível carregar suas informações profissionais.",
-    );
-  } finally {
-    setLoadingData(false);
-  }
-}
 
     loadAllData();
   }, [router, user?.id]);
 
-  async function handleSubmit() {
+  const handleSubmit = useCallback(async () => {
     if (!prestadorId || !user?.id) {
       Alert.alert("Erro", "Prestador não encontrado para edição.");
       return;
@@ -567,7 +532,33 @@ export default function Workinfo() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [
+    prestadorId,
+    user?.id,
+    nome,
+    categoria,
+    contatos,
+    tipoSelecionado,
+    valorContato,
+    profileImage?.base64,
+    telefoneDDD,
+    telefoneUsuario,
+    cpf,
+    birthDate,
+    gender,
+    logradouro,
+    numero,
+    complemento,
+    cep,
+    bairro,
+    municipio,
+    estado,
+    statusPrestador,
+    descricao,
+    eventImage?.base64,
+    servicoId,
+    router,
+  ]);
 
   return (
     <View style={styles.screen}>
