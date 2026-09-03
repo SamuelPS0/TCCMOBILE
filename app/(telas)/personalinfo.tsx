@@ -95,25 +95,16 @@ async function upsertUsuario(
   payload: Record<string, any>,
 ) {
   try {
-    console.log("PUT USUARIO:", `usuario/${userId}/dados`);
-    console.log("PAYLOAD:", payload);
-
     const response = await globalapi.put(
       `usuario/${userId}/dados`,
       payload,
     );
-
-    console.log("RESPOSTA USUARIO:", response.status, response.data);
-
     return response.data;
   } catch (error: any) {
-    console.log("ERRO USUARIO:", error);
-    console.log("STATUS:", error?.response?.status);
-    console.log("DATA:", error?.response?.data);
-    console.log("MESSAGE:", error?.message);
     throw error;
   }
 }
+
 async function upsertPrestador(
   prestadorId: number,
   payload: Record<string, any>,
@@ -183,9 +174,11 @@ export default function Personalinfo() {
   );
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadData() {
       if (!user?.id) {
-        setLoadingData(false);
+        if (isMounted) setLoadingData(false);
         return;
       }
 
@@ -194,6 +187,8 @@ export default function Personalinfo() {
           globalapi.get(`usuario/${user.id}`),
           getPrestadorByUsuario(user.id),
         ]);
+
+        if (!isMounted) return;
 
         const usuario = usuarioRes.data || {};
         const telefoneBruto = onlyDigits(
@@ -220,17 +215,24 @@ export default function Personalinfo() {
         setEstado(prestador?.uf || usuario?.estado || "");
         setPrestadorId(prestador?.id || null);
       } catch (error: any) {
+        if (!isMounted) return;
         showAlert(
           "Erro",
           error?.response?.data?.message ||
             "Não foi possível carregar seus dados pessoais.",
         );
       } finally {
-        setLoadingData(false);
+        if (isMounted) {
+          setLoadingData(false);
+        }
       }
     }
 
     loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   const handleBack = () => {
@@ -271,7 +273,6 @@ export default function Personalinfo() {
     if (!gender) errors.push("Gênero é obrigatório.");
     if (!estado) errors.push("Estado é obrigatório.");
 
-    // Validação de Obrigatoriedade da Nova Senha (se preenchida)
     if (senha.trim().length > 0 && !isStrongPassword(senha)) {
       errors.push("A nova senha precisa cumprir todos os requisitos de segurança.");
     }
@@ -284,18 +285,13 @@ export default function Personalinfo() {
     try {
       setLoading(true);
 
-const usuarioPayload: Record<string, any> = {
-  nome: nomeTrim,
-};
+      const usuarioPayload: Record<string, any> = {
+        nome: nomeTrim,
+      };
 
-if (senha.trim().length > 0) {
-  usuarioPayload.password = senha.trim();
-}
-console.log("ENVIANDO USUARIO:", usuarioPayload);
-console.log(
-  "URL USUARIO:",
-  `usuario/${user.id}/dados`
-);
+      if (senha.trim().length > 0) {
+        usuarioPayload.password = senha.trim();
+      }
 
       await upsertUsuario(Number(user.id), usuarioPayload);
 
@@ -326,7 +322,6 @@ console.log(
       setSenha("");
       setIsEditing(false);
     } catch (error: any) {
-      console.error("Erro ao salvar perfil:", error);
       showAlert(
         "Erro ao salvar",
         error?.response?.data?.message ||
@@ -383,16 +378,12 @@ console.log(
               <Input
                 label="CPF*"
                 value={cpf}
-                onChangeText={(text) => setCpf(maskCPF(text))}
-                keyboardType="numeric"
                 editable={false}
               />
 
               <Input
                 label="Email*"
                 value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
                 editable={false}
               />
 
@@ -442,36 +433,45 @@ console.log(
               )}
 
               <View style={styles.rowInputs}>
-                <DateInput
-                  label="Data de nascimento*"
-                  value={birthDate}
-                  onChange={setBirthDate}
-                  width="48%"
-                  disabled={!isEditing}
-                />
+                <View style={styles.fieldWrapper}>
+                  <DateInput
+                    label="Data de nascimento*"
+                    value={birthDate}
+                    onChange={setBirthDate}
+                    width="100%"
+                    disabled={true}
+                  />
+                  <View style={styles.invisibleBlocker} />
+                </View>
 
-                <SelectInput
-                  label="Gênero*"
-                  selectedValue={gender}
-                  onValueChange={setGender}
-                  width="48%"
-                  disabled={!isEditing}
-                  options={[
-                    { label: "Selecione...", value: "" },
-                    { label: "Masculino", value: "m" },
-                    { label: "Feminino", value: "f" },
-                    { label: "Outro", value: "o" },
-                  ]}
-                />
+                <View style={styles.fieldWrapper}>
+                  <SelectInput
+                    label="Gênero*"
+                    selectedValue={gender}
+                    onValueChange={setGender}
+                    width="100%"
+                    disabled={!isEditing}
+                    options={[
+                      { label: "Selecione...", value: "" },
+                      { label: "Masculino", value: "m" },
+                      { label: "Feminino", value: "f" },
+                      { label: "Outro", value: "o" },
+                    ]}
+                  />
+                  {!isEditing && <View style={styles.invisibleBlocker} />}
+                </View>
               </View>
 
-              <SelectInput
-                label="Estado*"
-                selectedValue={estado}
-                onValueChange={setEstado}
-                options={estados}
-                disabled={!isEditing}
-              />
+              <View style={styles.fullFieldWrapper}>
+                <SelectInput
+                  label="Estado*"
+                  selectedValue={estado}
+                  onValueChange={setEstado}
+                  options={estados}
+                  disabled={!isEditing}
+                />
+                {!isEditing && <View style={styles.invisibleBlocker} />}
+              </View>
 
               <View style={styles.buttonArea}>
                 {!isEditing ? (
@@ -530,6 +530,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+
+  fieldWrapper: {
+    width: "48%",
+    position: "relative",
+  },
+
+  fullFieldWrapper: {
+    width: "100%",
+    position: "relative",
+  },
+
+  invisibleBlocker: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 99,
+    backgroundColor: "transparent",
   },
 
   rulesGrid: {

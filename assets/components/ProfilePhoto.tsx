@@ -32,7 +32,7 @@ export const ProfilePhoto = ({
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.8,
+      quality: 0.3,
       base64: true,
     });
 

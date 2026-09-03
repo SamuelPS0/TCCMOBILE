@@ -190,6 +190,31 @@ export default function AccCreate() {
   }
 
   // =========================
+  // MÁSCARA WHATSAPP (Apenas números)
+  // =========================
+  function formatWhatsApp(value: string) {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 2) {
+      return numbers.length ? `(${numbers}` : "";
+    }
+    if (numbers.length <= 6) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    }
+    if (numbers.length <= 10) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+    }
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  }
+
+  function handleContatoChange(text: string) {
+    if (tipoSelecionado === "Whatsapp") {
+      setValorContato(formatWhatsApp(text));
+    } else {
+      setValorContato(text);
+    }
+  }
+
+  // =========================
   // CONTATOS
   // =========================
   function adicionarContato() {
@@ -369,10 +394,17 @@ export default function AccCreate() {
 
       await inativarPrestadoresDuplicados(Number(userId), Number(prestadorId));
 
-      const servicosExistentes = await getServicosByPrestador(prestadorId);
-      const servicoExistente = Array.isArray(servicosExistentes)
-        ? servicosExistentes[0]
-        : null;
+      let servicoExistente = null;
+      try {
+        const servicosExistentes = await getServicosByPrestador(prestadorId);
+        servicoExistente = Array.isArray(servicosExistentes)
+          ? servicosExistentes[0]
+          : null;
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          throw error;
+        }
+      }
 
       // ==========================================
       // 🔍 DEBUGGERS IMAGEM DO SERVIÇO
@@ -642,7 +674,10 @@ export default function AccCreate() {
                 <SelectInput
                   label="Adicionar contato*"
                   selectedValue={tipoSelecionado}
-                  onValueChange={setTipoSelecionado}
+                  onValueChange={(val) => {
+                    setTipoSelecionado(val);
+                    setValorContato("");
+                  }}
                   options={[
                     { label: "Whatsapp", value: "Whatsapp" },
                     { label: "Instagram", value: "Instagram" },
@@ -653,9 +688,10 @@ export default function AccCreate() {
                 {tipoSelecionado !== "" && (
                   <View style={{ marginTop: 10 }}>
                     <Input
-                      placeholder="Digite o contato..."
+                      placeholder={tipoSelecionado === "Whatsapp" ? "Digite o número (ex: 11999999999)" : "Digite o contato..."}
                       value={valorContato}
-                      onChangeText={setValorContato}
+                      onChangeText={handleContatoChange}
+                      keyboardType={tipoSelecionado === "Whatsapp" ? "phone-pad" : "default"}
                     />
 
                     <TouchableOpacity

@@ -139,18 +139,21 @@ export default function Landing() {
 
   const loadHomeCard = useCallback(async () => {
     console.log("[DEBUG] [HOME] Executando loadHomeCard...");
+    let isMounted = true;
 
     if (!user?.id) {
       console.log("[DEBUG] [HOME] user.id ausente ou nulo:", user);
-      setPrestador(null);
-      setServico(null);
-      setFotoUsuario(null);
-      setLoadingCard(false);
+      if (isMounted) {
+        setPrestador(null);
+        setServico(null);
+        setFotoUsuario(null);
+        setLoadingCard(false);
+      }
       return;
     }
 
     try {
-      setLoadingCard(true);
+      if (isMounted) setLoadingCard(true);
 
       console.log("[DEBUG] [HOME] ===== INICIO loadHomeCard =====");
       console.log("[DEBUG] [HOME] user logado completo:", sanitizeDeep(user));
@@ -164,6 +167,8 @@ export default function Landing() {
 
       console.log("[DEBUG] [HOME] prestadorData retornado:", sanitizeDeep(prestadorData));
       console.log("[DEBUG] [HOME] usuarioData retornado:", sanitizeDeep(usuarioData));
+
+      if (!isMounted) return;
 
       setPrestador(prestadorData || null);
       setFotoUsuario(normalizeImageUri(usuarioData?.foto));
@@ -183,6 +188,8 @@ export default function Landing() {
       );
 
       const servicos = await getServicosByPrestador(prestadorData.id);
+
+      if (!isMounted) return;
 
       console.log(
         "[DEBUG] [HOME] servicos retornados da API:",
@@ -227,21 +234,34 @@ export default function Landing() {
         sanitizeError(error),
       );
 
-      setPrestador(null);
-      setServico(null);
-      setFotoUsuario(null);
+      if (isMounted) {
+        setPrestador(null);
+        setServico(null);
+        setFotoUsuario(null);
+      }
     } finally {
       console.log("[DEBUG] [HOME] Finalizando carregamento. Desativando loadingCard em 1.5s.");
       setTimeout(() => {
-        setLoadingCard(false);
+        if (isMounted) {
+          setLoadingCard(false);
+        }
       }, 1500);
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   useFocusEffect(
     useCallback(() => {
       console.log("[DEBUG] [HOME] Tela recebeu foco (useFocusEffect disparado).");
-      loadHomeCard();
+      const cleanup = loadHomeCard();
+      return () => {
+        if (cleanup && typeof cleanup === "then") {
+          cleanup.then((fn) => fn && fn());
+        }
+      };
     }, [loadHomeCard]),
   );
 
