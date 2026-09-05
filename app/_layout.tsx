@@ -1,14 +1,7 @@
-import { useEffect } from "react";
-import { useColorScheme } from "react-native";
-
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from "@react-navigation/native";
-
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { useColorScheme } from "react-native";
 import "react-native-reanimated";
 
 import {
@@ -72,9 +65,9 @@ function RootNavigation() {
   if (!loaded) return null;
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+    <>
       <Stack screenOptions={{ headerShown: false }} />
       <StatusBar style="auto" />
-    </ThemeProvider>
+    </>
   );
 }

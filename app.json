@@ -4,19 +4,17 @@
     "slug": "divulgaimobile",
     "version": "1.0.0",
     "orientation": "portrait",
-  
     "scheme": "divulgaimobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-
+        "backgroundColor": "#E6F4FE"
       },
-      "edgeToEdgeEnabled": true,
+      
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.divulgaimobile"
     },
@@ -40,7 +38,9 @@
       ],
       "expo-font",
       "@react-native-community/datetimepicker",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-image",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,

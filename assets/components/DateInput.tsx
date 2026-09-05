@@ -1,6 +1,6 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { typography } from "../globalstyles/fonts";
 
 interface IDateInputProps {
@@ -24,11 +24,17 @@ export const DateInput = ({
 }: IDateInputProps) => {
   const [showPicker, setShowPicker] = useState(false);
 
-  function handleChange(event: any, selectedDate?: Date) {
-    setShowPicker(false);
+  function handleValueChange(event: any, selectedDate?: Date) {
+    if (Platform.OS === "android") {
+      setShowPicker(false);
+    }
     if (selectedDate) {
       onChange(selectedDate);
     }
+  }
+
+  function handleDismiss() {
+    setShowPicker(false);
   }
 
   return (
@@ -53,7 +59,8 @@ export const DateInput = ({
           display="default"
           minimumDate={minimumDate}
           maximumDate={new Date()}
-          onChange={handleChange}
+          onValueChange={handleValueChange}
+          onDismiss={handleDismiss}
         />
       )}
     </View>

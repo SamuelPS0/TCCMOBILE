@@ -26,6 +26,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (loading) return;
@@ -84,14 +85,26 @@ export default function Login() {
         />
 
         <View style={{ width: "90%", alignSelf: "center" }}>
-          <Input
-            label="Senha*"
-            placeholder="Digite sua senha"
-            width="100%"
-            value={senha}
-            onChangeText={setSenha}
-            secureTextEntry
-          />
+          <View style={styles.passwordContainer}>
+            <Input
+              label="Senha*"
+              placeholder="Digite sua senha"
+              width="100%"
+              value={senha}
+              onChangeText={setSenha}
+              secureTextEntry={!showPassword}
+            />
+            <Pressable
+              style={styles.eyeIcon}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={22}
+                color="#666"
+              />
+            </Pressable>
+          </View>
           <Pressable 
             onPress={() => {
               console.log("Clicou em esqueci a senha!");
@@ -134,6 +147,17 @@ const styles = StyleSheet.create({
   inputsarea: {
     gap: 20,
     width: "100%",
+  },
+  passwordContainer: {
+    position: "relative",
+    width: "100%",
+    justifyContent: "center",
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 15,
+    top: 38,
+    zIndex: 10,
   },
   buttonarea: {
     alignSelf: "center",

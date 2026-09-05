@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -23,7 +23,6 @@ import { typography } from "../../assets/globalstyles/fonts";
 import { useAuth } from "../../src/context/AuthContext";
 import {
   getPrestadorByUsuario,
-  getServicosByPrestador,
   normalizeImageUri,
   updateUsuarioFoto,
 } from "../../src/services/prestadorService";
@@ -34,51 +33,20 @@ function onlyDigits(value: string) {
   return (value || "").replace(/\D/g, "");
 }
 
-function maskCPF(value: string) {
-  const digits = onlyDigits(value).slice(0, 11);
-  return digits
-    .replace(/^(\d{3})(\d)/, "$1.$2")
-    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-    .replace(/\.(\d{3})(\d)/, ".$1-$2");
-}
-
 function maskDDD(value: string) {
   return onlyDigits(value).slice(0, 2);
 }
 
 function maskPhone(value: string) {
-  const digits = onlyDigits(value).slice(0, 9);
-  if (digits.length <= 4) return digits;
-  if (digits.length <= 8) {
-    return digits.replace(/(\d{4})(\d+)/, "$1-$2");
+  const digits = onlyDigits(value).slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) {
+    return digits.replace(/(\d{2})(\d+)/, "($1) $2");
   }
-  return digits.replace(/(\d{5})(\d+)/, "$1-$2");
-}
-
-function maskDate(value: string) {
-  const digits = onlyDigits(value).slice(0, 8);
-  return digits
-    .replace(/^(\d{2})(\d)/, "$1/$2")
-    .replace(/^(\d{2})\/(\d{2})(\d)/, "$1/$2/$3");
-}
-
-function formatDateToApi(dateStr: string) {
-  const clean = onlyDigits(dateStr);
-  if (clean.length !== 8) return "";
-  const day = clean.slice(0, 2);
-  const month = clean.slice(2, 4);
-  const year = clean.slice(4, 8);
-  return `${year}-${month}-${day}T00:00:00`;
-}
-
-function formatDateFromApi(dateStr: string) {
-  if (!dateStr) return "";
-  const clean = String(dateStr).split("T")[0];
-  const parts = clean.split("-");
-  if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  if (digits.length <= 10) {
+    return digits.replace(/(\d{2})(\d{4})(\d+)/, "($1) $2-$3");
   }
-  return clean;
+  return digits.replace(/(\d{2})(\d{5})(\d+)/, "($1) $2-$3");
 }
 
 function normalizeSocialHandle(value: string) {
@@ -138,9 +106,6 @@ export default function Workinfo() {
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [gender, setGender] = useState("");
 
   const [telefoneDDD, setTelefoneDDD] = useState("");
   const [telefoneUsuario, setTelefoneUsuario] = useState("");
@@ -171,16 +136,7 @@ export default function Workinfo() {
   const [prestadorId, setPrestadorId] = useState<number | null>(null);
   const [servicoId, setServicoId] = useState<number | null>(null);
   const [statusPrestador, setStatusPrestador] = useState("EM_ANALISE");
-
-  const genderOptions = useMemo(
-    () => [
-      { label: "Selecione...", value: "" },
-      { label: "Masculino", value: "Masculino" },
-      { label: "Feminino", value: "Feminino" },
-      { label: "Outro", value: "Outro" },
-    ],
-    [],
-  );
+  const [prestadorOriginal, setPrestadorOriginal] = useState<any>(null);
 
   const formatCep = useCallback((value: string) => {
     const cleaned = onlyDigits(value);
@@ -284,10 +240,6 @@ export default function Workinfo() {
           ) {
             uriFinal = `data:image/jpeg;base64,${rawFoto}`;
           }
-          // A photo already loaded from the API only needs its URI for preview.
-          // Keeping the original Base64 as well duplicates a potentially large
-          // string in this retained navigation screen and reuploads it on every
-          // unrelated form save. Base64 is kept only for a newly picked photo.
           setProfileImage({ uri: uriFinal, base64: null });
         }
 
@@ -301,6 +253,7 @@ export default function Workinfo() {
           return;
         }
 
+        setPrestadorOriginal(prestador);
         setPrestadorId(prestador.id);
         setStatusPrestador(
           prestador?.statusPrestador ??
@@ -309,20 +262,28 @@ export default function Workinfo() {
         );
 
         const [servicosRes, contatoRes] = await Promise.allSettled([
-          getServicosByPrestador(prestador.id),
+          globalapi.get("servico"),
           globalapi.get("contato"),
         ]);
 
-        let servicos = servicosRes.status === "fulfilled" ? servicosRes.value : [];
+        let todosServicos =
+          servicosRes.status === "fulfilled" && Array.isArray(servicosRes.value?.data)
+            ? servicosRes.value.data
+            : [];
+            
         let contatosTodos =
           contatoRes.status === "fulfilled" && Array.isArray(contatoRes.value?.data)
             ? contatoRes.value.data
             : [];
 
+        const servicosDoPrestador = todosServicos.filter(
+          (item: any) => Number(item?.prestador?.id ?? item?.prestadorId) === Number(prestador.id)
+        );
+
         const servicoAtivo =
-          (Array.isArray(servicos) ? servicos : []).find(
-            (item: any) => item?.statusServico === "ATIVO",
-          ) || servicos?.[0];
+          servicosDoPrestador.find(
+            (item: any) => item?.statusServico === true || item?.statusServico === "ATIVO"
+          ) || servicosDoPrestador?.[0];
 
         const contatosFiltrados = contatosTodos
           .filter(
@@ -334,7 +295,7 @@ export default function Workinfo() {
             let valorFormatado = item?.link || "";
             if (parseTipoContato(item?.tipoContato) === "Whatsapp") {
               const digitos = onlyDigits(item?.link || "");
-              const numeroPuro = digitos.startsWith("55") ? digitos.slice(2 + 2) : digitos;
+              const numeroPuro = digitos.startsWith("55") ? digitos.slice(2) : digitos;
               valorFormatado = maskPhone(numeroPuro);
             } else {
               valorFormatado = normalizeSocialHandle(item?.link || "");
@@ -349,16 +310,16 @@ export default function Workinfo() {
 
         setNome(servicoAtivo?.nome || prestador?.nome || "");
         setDescricao(servicoAtivo?.descricao || "");
-        setCpf(maskCPF(prestador?.cpf || ""));
-        setBirthDate(formatDateFromApi(prestador?.dataNascimento || ""));
-        setGender(prestador?.genero || "");
 
         const telDigitos = onlyDigits(prestador?.telefone || "");
-        if (telDigitos.length >= 10) {
-          setTelefoneDDD(telDigitos.slice(0, 2));
-          setTelefoneUsuario(maskPhone(telDigitos.slice(2)));
+        // Limpa código do país '55' se vier salvo com 13 dígitos
+        const telLimpo = telDigitos.startsWith("55") && telDigitos.length === 13 ? telDigitos.slice(2) : telDigitos;
+
+        if (telLimpo.length >= 10) {
+          setTelefoneDDD(telLimpo.slice(0, 2));
+          setTelefoneUsuario(maskPhone(telLimpo.slice(2, 11)));
         } else {
-          setTelefoneUsuario(maskPhone(telDigitos));
+          setTelefoneUsuario(maskPhone(telLimpo.slice(0, 11)));
         }
 
         setEstado(prestador?.uf || "");
@@ -380,7 +341,7 @@ export default function Workinfo() {
 
         setServicoId(servicoAtivo?.id || null);
 
-        if (servicoAtivo?.foto) {
+        if (servicoAtivo?.foto && servicoAtivo.foto !== "[imagem64]") {
           setEventImage({ uri: normalizeImageUri(servicoAtivo.foto) });
         }
       } catch (error: any) {
@@ -440,25 +401,28 @@ export default function Workinfo() {
         );
       }
 
-      const telefoneCompleto =
-        onlyDigits(telefoneDDD) + onlyDigits(telefoneUsuario);
+      // Monta os dígitos do telefone e aplica o corte estrito para 11 caracteres (VARCHAR(11))
+      const telefoneBruto = onlyDigits(telefoneDDD) + onlyDigits(telefoneUsuario);
+      const telefoneTratado = telefoneBruto.startsWith("55") && telefoneBruto.length === 13 
+        ? telefoneBruto.slice(2) 
+        : telefoneBruto.slice(0, 11);
 
       const prestadorPayload = {
+        id: prestadorId,
         usuario: { id: Number(user.id) },
         nome,
-        cpf: onlyDigits(cpf),
-        dataNascimento: birthDate ? formatDateToApi(birthDate) : undefined,
-        genero: gender || "Não informado",
-        telefone: telefoneCompleto || onlyDigits(contatosParaEnviar?.[0]?.valor || ""),
-        logradouro,
-        numeroResidencial: onlyDigits(numero),
-        complemento,
-        cep: onlyDigits(cep),
-        bairro,
-        cidade: municipio,
-        uf: estado,
-        statusPrestador,
-        status_prestador: statusPrestador,
+        telefone: telefoneTratado || onlyDigits(prestadorOriginal?.telefone || "").slice(0, 11) || onlyDigits(contatosParaEnviar?.[0]?.valor || "").slice(0, 11),
+        logradouro: logradouro || prestadorOriginal?.logradouro || "",
+        numeroResidencial: onlyDigits(numero) || prestadorOriginal?.numeroResidencial || "",
+        complemento: complemento ?? prestadorOriginal?.complemento ?? "",
+        cep: onlyDigits(cep) || prestadorOriginal?.cep || "",
+        bairro: bairro || prestadorOriginal?.bairro || "",
+        cidade: municipio || prestadorOriginal?.cidade || "",
+        uf: estado || prestadorOriginal?.uf || "",
+        statusPrestador: statusPrestador || prestadorOriginal?.statusPrestador || "EM_ANALISE",
+        cpf: prestadorOriginal?.cpf || "",
+        dataNascimento: prestadorOriginal?.dataNascimento || null,
+        genero: prestadorOriginal?.genero || "",
       };
 
       await saveWithFallback({
@@ -470,9 +434,9 @@ export default function Workinfo() {
       const servicoPayload = {
         nome,
         descricao,
-        statusServico: "ATIVO",
-        prestadorId,
-        categoriaId: Number(categoria),
+        statusServico: true,
+        prestador: { id: prestadorId },
+        categoria: { id: Number(categoria) },
         foto: eventImage?.base64 || null,
       };
 
@@ -547,9 +511,6 @@ export default function Workinfo() {
     profileImage?.base64,
     telefoneDDD,
     telefoneUsuario,
-    cpf,
-    birthDate,
-    gender,
     logradouro,
     numero,
     complemento,
@@ -558,6 +519,7 @@ export default function Workinfo() {
     municipio,
     estado,
     statusPrestador,
+    prestadorOriginal,
     descricao,
     eventImage?.base64,
     servicoId,
@@ -605,14 +567,6 @@ export default function Workinfo() {
               icon="document-text-outline"
             />
 
-            <Input
-              label="CPF"
-              value={cpf}
-              onChangeText={(text) => setCpf(maskCPF(text))}
-              keyboardType="numeric"
-              icon="card-outline"
-            />
-
             <View style={styles.rowInputs}>
               <Input
                 label="DDD"
@@ -620,6 +574,7 @@ export default function Workinfo() {
                 onChangeText={(text) => setTelefoneDDD(maskDDD(text))}
                 width="21%"
                 keyboardType="numeric"
+                maxLength={2}
               />
               <Input
                 label="Telefone"
@@ -627,6 +582,7 @@ export default function Workinfo() {
                 onChangeText={(text) => setTelefoneUsuario(maskPhone(text))}
                 width="75%"
                 keyboardType="numeric"
+                maxLength={15}
               />
             </View>
 
@@ -654,7 +610,7 @@ export default function Workinfo() {
                       <Input
                         placeholder={
                           tipoSelecionado === "Whatsapp"
-                            ? "Ex: 99999-9999"
+                            ? "Ex: (11) 99999-9999"
                             : "Digite o usuário (ex: seu.usuario)"
                         }
                         value={valorContato}
@@ -708,6 +664,7 @@ export default function Workinfo() {
               onChangeText={handleCepChange}
               icon="location-outline"
               keyboardType="numeric"
+              maxLength={9}
             />
 
             {loadingCep && <Text>Buscando CEP...</Text>}
@@ -751,23 +708,6 @@ export default function Workinfo() {
                 value={complemento}
                 onChangeText={setComplemento}
                 width={"65%"}
-              />
-            </View>
-
-            <View style={styles.rowInputs}>
-              <Input
-                label="Data de nascimento"
-                value={birthDate}
-                onChangeText={(text) => setBirthDate(maskDate(text))}
-                keyboardType="numeric"
-                width={"48%"}
-              />
-              <SelectInput
-                label="Gênero"
-                selectedValue={gender}
-                onValueChange={setGender}
-                options={genderOptions}
-                width={"48%"}
               />
             </View>
 
