@@ -87,7 +87,6 @@ export default function Landing() {
   }
 
   function closeAnalysisModal() {
-    console.log("[DEBUG] Fechando modal de análise e redirecionando para as abas.");
     setAnalysisModalVisible(false);
     router.replace("/(tabs)");
   }
@@ -138,11 +137,9 @@ export default function Landing() {
   }
 
   const loadHomeCard = useCallback(async () => {
-    console.log("[DEBUG] [HOME] Executando loadHomeCard...");
     let isMounted = true;
 
     if (!user?.id) {
-      console.log("[DEBUG] [HOME] user.id ausente ou nulo:", user);
       if (isMounted) {
         setPrestador(null);
         setServico(null);
@@ -155,18 +152,10 @@ export default function Landing() {
     try {
       if (isMounted) setLoadingCard(true);
 
-      console.log("[DEBUG] [HOME] ===== INICIO loadHomeCard =====");
-      console.log("[DEBUG] [HOME] user logado completo:", sanitizeDeep(user));
-      console.log("[DEBUG] [HOME] ID do usuário autenticado:", user.id);
-
-      console.log("[DEBUG] [HOME] Buscando dados em paralelo: getPrestadorByUsuario e getUsuarioById...");
       const [prestadorData, usuarioData] = await Promise.all([
         getPrestadorByUsuario(user.id),
         getUsuarioById(user.id),
       ]);
-
-      console.log("[DEBUG] [HOME] prestadorData retornado:", sanitizeDeep(prestadorData));
-      console.log("[DEBUG] [HOME] usuarioData retornado:", sanitizeDeep(usuarioData));
 
       if (!isMounted) return;
 
@@ -174,29 +163,13 @@ export default function Landing() {
       setFotoUsuario(normalizeImageUri(usuarioData?.foto));
 
       if (!prestadorData?.id) {
-        console.log(
-          "[DEBUG] [HOME] ATENÇÃO: Nenhum ID de prestador encontrado para user.id =",
-          user.id,
-        );
         setServico(null);
         return;
       }
 
-      console.log(
-        "[DEBUG] [HOME] Buscando serviços utilizando o ID correto do prestador:",
-        prestadorData.id,
-      );
-
       const servicos = await getServicosByPrestador(prestadorData.id);
 
       if (!isMounted) return;
-
-      console.log(
-        "[DEBUG] [HOME] servicos retornados da API:",
-        Array.isArray(servicos)
-          ? servicos.map((s: any) => sanitizeDeep(s))
-          : sanitizeDeep(servicos),
-      );
 
       const servicoVisivel = Array.isArray(servicos)
         ? servicos.find((item: any) => {
@@ -222,25 +195,14 @@ export default function Landing() {
           servicos[0]
         : null;
 
-      console.log(
-        "[DEBUG] [HOME] servicoVisivel selecionado:",
-        sanitizeDeep(servicoVisivel),
-      );
-
       setServico(servicoVisivel || null);
     } catch (error: any) {
-      console.log(
-        "[DEBUG] [HOME] ERRO CRÍTICO ao carregar card da home:",
-        sanitizeError(error),
-      );
-
       if (isMounted) {
         setPrestador(null);
         setServico(null);
         setFotoUsuario(null);
       }
     } finally {
-      console.log("[DEBUG] [HOME] Finalizando carregamento. Desativando loadingCard em 1.5s.");
       setTimeout(() => {
         if (isMounted) {
           setLoadingCard(false);
@@ -255,7 +217,6 @@ export default function Landing() {
 
   useFocusEffect(
     useCallback(() => {
-      console.log("[DEBUG] [HOME] Tela recebeu foco (useFocusEffect disparado).");
       const cleanup = loadHomeCard();
       return () => {
         if (cleanup && typeof cleanup === "then") {
@@ -266,29 +227,21 @@ export default function Landing() {
   );
 
   useEffect(() => {
-    console.log("[DEBUG] [HOME] Verificando parâmetros de rota para modal de análise:", params);
     if (params.perfilEnviadoAnalise === "1" && !analysisModalShown) {
-      console.log("[DEBUG] [HOME] Exibindo modal de análise de perfil.");
       setAnalysisModalVisible(true);
       setAnalysisModalShown(true);
     }
   }, [analysisModalShown, params.perfilEnviadoAnalise]);
 
   async function handleCreateProfile() {
-    console.log("[DEBUG] [HOME] Botão 'Criar card' pressionado.");
-    if (!user) {
-      console.log("[DEBUG] [HOME] ERRO: Usuário não autenticado ao tentar criar perfil.");
-      return;
-    }
+    if (!user) return;
 
     const pendingProfile = await getPendingPrestadorProfile();
-    console.log("[DEBUG] [HOME] Pending profile recuperado do storage:", sanitizeDeep(pendingProfile));
 
     const cpf =
       user.cpf ||
       (pendingProfile?.userId === String(user.id) ? pendingProfile?.cpf : "");
 
-    console.log("[DEBUG] [HOME] Redirecionando para /(telas)/accCreate com userId:", user.id, "e cpf:", cpf);
     router.push({
       pathname: "/(telas)/accCreate",
       params: {
@@ -299,11 +252,7 @@ export default function Landing() {
   }
 
   async function openFeedbackModal(tipo: "FEEDBACK" | "DENUNCIA") {
-    console.log("[DEBUG] [HOME] Abrindo modal de feedback/ocorrência. Tipo:", tipo);
-    if (!prestador?.id) {
-      console.log("[DEBUG] [HOME] Impossível abrir modal: prestador.id ausente.");
-      return;
-    }
+    if (!prestador?.id) return;
 
     try {
       setFeedbackLoading(true);
@@ -312,12 +261,9 @@ export default function Landing() {
         tipo === "FEEDBACK" ? "Meus feedbacks" : "Minhas ocorrências",
       );
 
-      console.log("[DEBUG] [HOME] Buscando feedbacks filtrados para prestador ID:", prestador.id, "Tipo:", tipo);
       const lista = await getFeedbacksFiltrados(prestador.id, tipo);
-      console.log("[DEBUG] [HOME] Lista de feedbacks retornada:", sanitizeDeep(lista));
       setFeedbacks(lista);
     } catch (error: any) {
-      console.log("[DEBUG] [HOME] Erro ao carregar feedbacks/ocorrências:", sanitizeError(error));
       setFeedbacks([]);
     } finally {
       setFeedbackLoading(false);
@@ -342,13 +288,20 @@ export default function Landing() {
 
         <View style={styles.mainArea}>
           {loadingCard ? (
-            <View style={styles.loaderBox}>
-              <ActivityIndicator
-                size="large"
-                color="#FFFFFF"
-                style={styles.loaderIcon}
-              />
-              <Text style={styles.loaderText}>Carregando usuário...</Text>
+            /* SKELETON SCREEN */
+            <View style={styles.skeletonCard}>
+              <View style={styles.skeletonTitle} />
+              <View style={styles.skeletonDivider} />
+              <View style={styles.skeletonAvatar} />
+              <View style={styles.skeletonSectionTitle} />
+              <View style={styles.skeletonTextLine} />
+              <View style={styles.skeletonTextLineShort} />
+              <View style={styles.skeletonSectionTitle} />
+              <View style={styles.skeletonServiceImage} />
+              <View style={styles.skeletonFooterRow}>
+                <View style={styles.skeletonButton} />
+                <View style={styles.skeletonButton} />
+              </View>
             </View>
           ) : !hasCardData ? (
             <Pressable onPress={handleCreateProfile}>
@@ -545,21 +498,86 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 48,
   },
-  loaderBox: {
-    minHeight: 420,
-    justifyContent: "center",
+  
+  /* SKELETON SCREEN STYLES */
+  skeletonCard: {
+    width: "86%",
+    alignSelf: "center",
+    marginTop: 36,
+    marginBottom: 48,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 18,
     alignItems: "center",
-    gap: 25,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  loaderIcon: {
-    transform: [{ scale: 2 }],
+  skeletonTitle: {
+    width: "60%",
+    height: 28,
+    backgroundColor: "#EAEAEA",
+    borderRadius: 6,
   },
-  loaderText: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontFamily: "Poppins_700Bold",
-    textAlign: "center",
+  skeletonDivider: {
+    marginTop: 12,
+    width: "100%",
+    height: 2,
+    backgroundColor: "#F0F0F0",
   },
+  skeletonAvatar: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    marginTop: 18,
+    backgroundColor: "#EAEAEA",
+  },
+  skeletonSectionTitle: {
+    width: "40%",
+    height: 18,
+    backgroundColor: "#EAEAEA",
+    borderRadius: 4,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  skeletonTextLine: {
+    width: "90%",
+    height: 12,
+    backgroundColor: "#F2F2F2",
+    borderRadius: 4,
+    marginTop: 6,
+  },
+  skeletonTextLineShort: {
+    width: "65%",
+    height: 12,
+    backgroundColor: "#F2F2F2",
+    borderRadius: 4,
+    marginTop: 6,
+  },
+  skeletonServiceImage: {
+    width: "95%",
+    height: 140,
+    borderRadius: 12,
+    marginTop: 6,
+    marginBottom: 16,
+    backgroundColor: "#EAEAEA",
+  },
+  skeletonFooterRow: {
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-between",
+    gap: 10,
+    marginTop: 10,
+  },
+  skeletonButton: {
+    flex: 1,
+    height: 40,
+    backgroundColor: "#EAEAEA",
+    borderRadius: 10,
+  },
+
   createCard: {
     width: 260,
     height: 130,

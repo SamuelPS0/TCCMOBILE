@@ -28,7 +28,6 @@ import {
   getPendingPrestadorProfile,
 } from "../../src/storage/onboardingStorage";
 import { normalizeContactLink } from "../../src/utils/contactLinks";
-import { getPickedImageDebugInfo } from "../../src/utils/imagePickerAsset";
 
 async function saveWithFallback(options: {
   method: "put" | "post";
@@ -67,7 +66,6 @@ async function inativarPrestadoresDuplicados(
     prestadores = Array.isArray(response.data) ? response.data : [];
   } catch (error: any) {
     if (error?.response?.status !== 404) {
-      console.log("WARN prestadores duplicados:", error?.message || error);
       return;
     }
 
@@ -140,18 +138,26 @@ export default function AccCreate() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // =========================
-  // CEP
+  // CEP & MÁSCARA
   // =========================
   function formatCep(value: string) {
-    const cep = value.replace(/\D/g, "");
-    return cep.replace(/^(\d{5})(\d)/, "$1-$2");
+    const rawNumbers = value.replace(/\D/g, "").slice(0, 8);
+    if (rawNumbers.length > 5) {
+      return `${rawNumbers.slice(0, 5)}-${rawNumbers.slice(5)}`;
+    }
+    return rawNumbers;
   }
 
   async function handleCepChange(text: string) {
-    const cepLimpo = text.replace(/\D/g, "");
-    setCep(cepLimpo);
+    const formatted = formatCep(text);
+    setCep(formatted);
 
-    if (cepLimpo.length !== 8) return;
+    const cepLimpo = text.replace(/\D/g, "").slice(0, 8);
+
+    if (cepLimpo.length !== 8) {
+      setErroCep("");
+      return;
+    }
 
     try {
       setLoadingCep(true);
@@ -160,7 +166,7 @@ export default function AccCreate() {
       const data = await buscarCep(cepLimpo);
 
       if (data.erro) {
-        setErroCep("CEP inválido");
+        setErroCep("CEP inválido ou não encontrado");
         return;
       }
 
@@ -169,28 +175,19 @@ export default function AccCreate() {
       setLogradouro(data.logradouro || "");
       setBairro(data.bairro || "");
     } catch (error: any) {
-      const errorCode = error?.code || "CEP_REDE_FALHOU";
       const errorMessage =
         error?.message ||
         error?.response?.data?.message ||
         "Erro desconhecido ao consultar ViaCEP";
 
       setErroCep(errorMessage);
-      console.error("[ViaCEP] Falha na consulta de CEP", {
-        cepDigitado: cepLimpo,
-        code: errorCode,
-        message: errorMessage,
-        status: error?.status || error?.response?.status,
-        responseData: error?.response?.data,
-        originalError: error?.originalError || error,
-      });
     } finally {
       setLoadingCep(false);
     }
   }
 
   // =========================
-  // MÁSCARA WHATSAPP (Apenas números)
+  // MÁSCARA WHATSAPP
   // =========================
   function formatWhatsApp(value: string) {
     const numbers = value.replace(/\D/g, "");
@@ -247,7 +244,8 @@ export default function AccCreate() {
       errors.descricao =
         "O campo descrição deve ser preenchido obrigatoriamente";
     }
-    if (!cep || cep.length !== 8) {
+    const cepLimpo = cep.replace(/\D/g, "");
+    if (!cepLimpo || cepLimpo.length !== 8) {
       errors.cep = "O campo CEP deve ser preenchido obrigatoriamente";
     }
     if (!estado) {
@@ -276,28 +274,22 @@ export default function AccCreate() {
   }
 
   // =========================
-  // SUBMIT (BASE64 ONLY)
+  // SUBMIT
   // =========================
   const handleSubmit = async () => {
     const erro = validar();
     if (erro) return;
 
     const cpfFinal = (cpf || cpfPersistido || "").replace(/\D/g, "");
+    const cepLimpo = cep.replace(/\D/g, "");
     const contatosParaEnviar = [...contatos];
 
-    // Se usuário digitou contato e não clicou em "Adicionar", inclui automaticamente no submit.
     if (tipoSelecionado && valorContato) {
       contatosParaEnviar.push({ tipo: tipoSelecionado, valor: valorContato });
     }
 
     try {
       setLoading(true);
-
-      console.log("=== SUBMIT START ===");
-      console.log(
-        "[accCreate] Foto de perfil selecionada:",
-        getPickedImageDebugInfo(profileImage),
-      );
 
       const profilePhotoBase64 = profileImage?.base64 || null;
       const normalizedProfilePhotoBase64 =
@@ -308,23 +300,11 @@ export default function AccCreate() {
 
       if (normalizedProfilePhotoBase64) {
         try {
-          const usuarioComFoto = await updateUsuarioFoto(
+          await updateUsuarioFoto(
             Number(userId),
             normalizedProfilePhotoBase64,
           );
-          console.log("[accCreate] Foto do usuário salva:", {
-            userId: Number(userId),
-            fotoRetornada: !!usuarioComFoto?.foto,
-          });
         } catch (photoError: any) {
-          console.error("[accCreate] Erro ao enviar foto do usuário", {
-            endpointTentado: "/usuario/{id}/foto",
-            userId: Number(userId),
-            status: photoError?.response?.status ?? "sem status",
-            url: photoError?.config?.url ?? "sem url",
-            message: photoError?.message ?? "sem mensagem",
-            responseData: photoError?.response?.data ?? "sem body",
-          });
           throw photoError;
         }
       } else if (profileImage?.uri) {
@@ -347,7 +327,7 @@ export default function AccCreate() {
         logradouro,
         numeroResidencial: numero,
         complemento,
-        cep,
+        cep: cepLimpo,
         bairro,
         cidade: municipio,
         uf: estado,
@@ -406,13 +386,6 @@ export default function AccCreate() {
         }
       }
 
-      // ==========================================
-      // 🔍 DEBUGGERS IMAGEM DO SERVIÇO
-      // ==========================================
-      console.log("🔍 [DEBUG IMAGEM SERVICO] Objeto eventImage bruto:", eventImage);
-      console.log("🔍 [DEBUG IMAGEM SERVICO] eventImage?.base64 (tipo):", typeof eventImage?.base64);
-      console.log("🔍 [DEBUG IMAGEM SERVICO] eventImage?.base64 (tamanho):", eventImage?.base64 ? eventImage.base64.length : 0);
-
       const servicoPayload = {
         nome,
         descricao,
@@ -458,23 +431,11 @@ export default function AccCreate() {
 
       await clearPendingPrestadorProfile();
 
-      console.log("=== SUCCESS ===");
-
       router.replace({
         pathname: "/(tabs)",
         params: { perfilEnviadoAnalise: "1" },
       });
     } catch (error: any) {
-      console.log("=== ERROR ===");
-      console.log("🔍 [DEBUG ERRO API Detalhado]:", error?.response?.data || error.message);
-
-      console.error("[accCreate] DEBUG - Erro no cadastro de perfil", {
-        status: error?.response?.status ?? "sem status",
-        url: error?.config?.url ?? "sem url",
-        message: error?.message ?? "sem mensagem",
-        responseData: error?.response?.data ?? "sem body",
-      });
-
       alert(error?.response?.data?.message || "Erro ao criar perfil");
     } finally {
       setLoading(false);
@@ -584,7 +545,10 @@ export default function AccCreate() {
 
           <Input
             label="CEP*"
-            value={formatCep(cep)}
+            value={cep}
+            placeholder="00000-000"
+            keyboardType="numeric"
+            maxLength={9}
             onChangeText={(text) => {
               handleCepChange(text);
               setFieldErrors((prev) => ({ ...prev, cep: "" }));
@@ -593,7 +557,7 @@ export default function AccCreate() {
           />
 
           {loadingCep && <Text>Buscando CEP...</Text>}
-          {erroCep && <Text style={{ color: "red" }}>{erroCep}</Text>}
+          {erroCep ? <Text style={{ color: "red" }}>{erroCep}</Text> : null}
 
           <View style={styles.rowInputs}>
             <SelectInput

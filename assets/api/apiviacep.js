@@ -1,47 +1,64 @@
 import axios from "axios";
 
+// Mapeamento de mensagens amigáveis orientadas ao usuário
+const ERROS_CEP = {
+  CEP_FORMATO_INVALIDO: "Por favor, digite um CEP válido com 8 dígitos.",
+  CEP_NAO_ENCONTRADO: "Não encontramos este CEP. Confira se os números estão certos.",
+  CEP_TIMEOUT: "A busca demorou muito. Verifique sua conexão e tente novamente.",
+  CEP_ERRO_CONEXAO: "Não foi possível conectar ao serviço de CEP. Tente mais tarde.",
+  CEP_ERRO_SERVIDOR: "Serviço de CEP temporariamente indisponível. Tente novamente em alguns instantes.",
+};
+
 export const buscarCep = async (cep) => {
   const cepLimpo = String(cep || "").replace(/\D/g, "");
 
+  // Validation prévia de formato
   if (cepLimpo.length !== 8) {
-    throw new Error("CEP_FORMATO_INVALIDO");
+    const error = new Error(ERROS_CEP.CEP_FORMATO_INVALIDO);
+    error.code = "CEP_FORMATO_INVALIDO";
+    throw error;
   }
 
   try {
     const response = await axios.get(
       `https://viacep.com.br/ws/${cepLimpo}/json/`,
-      {
-        timeout: 8000,
-      },
+      { timeout: 8000 }
     );
 
-    if (response.data.erro) {
-            const notFoundError = new Error("CEP_NAO_ENCONTRADO");
+    // O ViaCEP retorna { erro: "true" } ou { erro: true } quando o CEP não existe no banco deles
+    if (response.data && response.data.erro) {
+      const notFoundError = new Error(ERROS_CEP.CEP_NAO_ENCONTRADO);
       notFoundError.code = "CEP_NAO_ENCONTRADO";
       throw notFoundError;
     }
 
     return response.data;
   } catch (error) {
-    const status = error?.response?.status;
-    const apiMessage =
-      error?.response?.data?.message ||
-      error?.response?.data?.erro ||
-      error?.message ||
-      "Erro desconhecido ao consultar ViaCEP";
+    // Se o erro já foi tratado por nós acima (ex: CEP não encontrado/formato)
+    if (error.code && ERROS_CEP[error.code]) {
+      throw error;
+    }
 
-     const normalizedCode =
-      error?.code === "ECONNABORTED"
-        ? "CEP_TIMEOUT"
-        : status
-          ? `CEP_HTTP_${status}`
-          : error?.code || "CEP_REDE_FALHOU";
+    // Identificação de falhas de rede/HTTP
+    let code = "CEP_ERRO_CONEXAO";
+    let message = ERROS_CEP.CEP_ERRO_CONEXAO;
 
-    const wrappedError = new Error(`${normalizedCode}: ${apiMessage}`);
-    wrappedError.code = normalizedCode;
-    wrappedError.status = status;
+    if (error.code === "ECONNABORTED") {
+      code = "CEP_TIMEOUT";
+      message = ERROS_CEP.CEP_TIMEOUT;
+    } else if (error.response?.status >= 500) {
+      code = "CEP_ERRO_SERVIDOR";
+      message = ERROS_CEP.CEP_ERRO_SERVIDOR;
+    } else if (error.response?.status === 400) {
+      code = "CEP_FORMATO_INVALIDO";
+      message = ERROS_CEP.CEP_FORMATO_INVALIDO;
+    }
+
+    const wrappedError = new Error(message);
+    wrappedError.code = code;
+    wrappedError.status = error.response?.status;
     wrappedError.originalError = error;
 
-     throw wrappedError;
+    throw wrappedError;
   }
 };
