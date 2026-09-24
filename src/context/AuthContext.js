@@ -17,8 +17,8 @@ export const AuthProvider = ({ children }) => {
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }
-      } catch (error) {
-        console.log("Erro ao carregar usuário:", error);
+      } catch {
+        // Storage failures leave the session unauthenticated.
       } finally {
         setLoading(false);
       }
@@ -31,8 +31,8 @@ export const AuthProvider = ({ children }) => {
     try {
       setUser(userData);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-    } catch (error) {
-      console.log("Erro ao salvar usuário:", error);
+    } catch {
+      // The in-memory user remains available for the current session.
     }
   };
 
@@ -40,8 +40,8 @@ export const AuthProvider = ({ children }) => {
     try {
       setUser(null);
       await AsyncStorage.removeItem(STORAGE_KEY);
-    } catch (error) {
-      console.log("Erro ao remover usuário:", error);
+    } catch {
+      // The in-memory session has already been cleared.
     }
   };
 

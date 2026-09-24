@@ -49,7 +49,6 @@ export default function EsqSenha1() {
             Alert.alert("Sucesso", "Código enviado para seu e-mail.");
             router.push("/(auth)/VerificacaoEmail/esqsenha2");
         } catch (error: any) {
-            console.error(error);
             Alert.alert("Erro", formatApiError(error));
         } finally {
             setLoading(false);

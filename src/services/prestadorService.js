@@ -37,8 +37,7 @@ export const getPrestadorByUsuario = async (usuarioId) => {
     if (prestadorMaisRecenteInativo) return prestadorMaisRecenteInativo;
 
     return null;
-  } catch (error) {
-    console.log("WARN getPrestadorByUsuario error:", error);
+  } catch {
     return null;
   }
 };
@@ -64,12 +63,10 @@ export const getServicosByPrestador = async (prestadorId) => {
               item?.prestadorId ?? item?.prestador_id ?? item?.prestador?.id,
             ) === Number(prestadorId),
         );
-      } catch (fallbackError) {
-        console.log("WARN getServicosByPrestador fallback error:", fallbackError);
+      } catch {
         return [];
       }
     }
-    console.log("WARN getServicosByPrestador error:", error);
     return [];
   }
 };

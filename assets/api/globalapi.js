@@ -62,38 +62,6 @@ const globalapi = axios.create({
   },
 });
 
-function sanitizeForLog(value) {
-  if (value == null) return value;
-
-  if (typeof value === "string") {
-    const isBase64Like =
-      value.startsWith("data:image/") ||
-      value.startsWith("/9j/") ||
-      value.startsWith("iVBOR") ||
-      value.length > 30;
-
-    return isBase64Like ? "[imagem64]" : value;
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeForLog(item));
-  }
-
-  if (typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => {
-        const sensitiveKeys = ["password", "senha", "authorization", "cookie"];
-        if (sensitiveKeys.includes(String(key).toLowerCase())) {
-          return [key, "[redacted]"];
-        }
-        return [key, sanitizeForLog(item)];
-      }),
-    );
-  }
-
-  return value;
-}
-
 function getNetworkDiagnostic(error) {
   if (error?.code === "API_CONFIGURATION_MISSING") return error.message;
   if (error?.response) return null;
@@ -130,37 +98,7 @@ globalapi.interceptors.request.use(
       return Promise.reject(error);
     }
 
-    console.log("==== REQUEST ====");
-    console.log("URL:", `${config.baseURL ?? ""}${config.url ?? ""}`);
-    console.log("METHOD:", config.method);
-    console.log("DATA:", sanitizeForLog(config.data));
     return config;
-  },
-  (error) => {
-    console.log("REQUEST ERROR:", sanitizeForLog(error));
-    return Promise.reject(error);
-  },
-);
-
-globalapi.interceptors.response.use(
-  (response) => {
-    console.log("==== RESPONSE ====");
-    console.log("URL:", response.config.url);
-    console.log("STATUS:", response.status);
-    console.log("DATA:", sanitizeForLog(response.data));
-    return response;
-  },
-  (error) => {
-    console.log("==== RESPONSE ERROR ====");
-    console.log("URL:", error?.config?.url);
-    console.log("BASE URL:", error?.config?.baseURL);
-    console.log("STATUS:", error?.response?.status);
-    console.log("DATA:", sanitizeForLog(error?.response?.data));
-    console.log("MESSAGE:", error?.message);
-    const diagnostic = getNetworkDiagnostic(error);
-    if (diagnostic) console.log("DIAGNOSTIC:", diagnostic);
-
-    return Promise.reject(error);
   },
 );
 
@@ -170,5 +108,4 @@ export {
   getApiConfigurationError,
   globalapi,
   resolveApiBaseURL,
-  sanitizeForLog,
 };
