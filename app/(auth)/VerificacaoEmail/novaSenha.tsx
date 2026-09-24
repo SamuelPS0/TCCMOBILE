@@ -83,7 +83,6 @@ export default function NovaSenha() {
             await AsyncStorage.removeItem("emailRecuperacao");
             router.replace("/");
         } catch (error: any) {
-            console.error(error);
             Alert.alert("Erro", formatApiError(error));
         } finally {
             setLoadingSenha(false);

@@ -106,10 +106,7 @@ export default function Login() {
             </Pressable>
           </View>
           <Pressable 
-            onPress={() => {
-              console.log("Clicou em esqueci a senha!");
-              router.push("/(auth)/VerificacaoEmail/esqsenha1");
-            }}
+            onPress={() => router.push("/(auth)/VerificacaoEmail/esqsenha1")}
             style={styles.forgotPasswordContainer}
           >
             <Text style={styles.forgotPasswordText}>Esqueceu sua senha?</Text>

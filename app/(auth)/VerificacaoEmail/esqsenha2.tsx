@@ -116,7 +116,6 @@ export default function EsqSenha2() {
                 params: { codigo: codigoCompleto }
             });
         } catch (error: any) {
-            console.error(error);
             Alert.alert("Erro", formatApiError(error));
         } finally {
             setLoadingCodigo(false);
@@ -151,7 +150,6 @@ export default function EsqSenha2() {
             setCode(["", "", "", "", "", ""]);
             inputRefs.current[0]?.focus();
         } catch (error: any) {
-            console.error(error);
             Alert.alert("Erro", formatApiError(error));
         } finally {
             setLoadingResend(false);
